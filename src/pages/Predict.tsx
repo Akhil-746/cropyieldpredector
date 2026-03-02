@@ -4,7 +4,9 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowRight, CheckCircle2, Leaf, TrendingUp, Droplets, ThermometerSun } from "lucide-react";
+import { ArrowRight, CheckCircle2, Leaf, TrendingUp, Droplets, ThermometerSun, BarChart3, AlertTriangle, ShieldCheck } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 const crops = ["Rice", "Wheat", "Maize", "Sugarcane", "Cotton", "Soybean", "Groundnut", "Pulses"];
 const seasons = ["Kharif", "Rabi", "Zaid"];
@@ -16,6 +18,8 @@ interface PredictionResult {
   confidence: number;
   recommendations: string[];
   riskLevel: string;
+  yieldPerHa: number;
+  comparison: { label: string; value: number }[];
 }
 
 const simulatePrediction = (crop: string, area: number): PredictionResult => {
@@ -24,8 +28,10 @@ const simulatePrediction = (crop: string, area: number): PredictionResult => {
   };
   const base = baseYields[crop] || 2.0;
   const variation = 0.8 + Math.random() * 0.4;
+  const yieldPerHa = Math.round(base * variation * 100) / 100;
   return {
-    yield: Math.round(base * variation * area * 100) / 100,
+    yield: Math.round(yieldPerHa * area * 100) / 100,
+    yieldPerHa,
     confidence: Math.round(88 + Math.random() * 8),
     riskLevel: Math.random() > 0.6 ? "Low" : Math.random() > 0.3 ? "Medium" : "High",
     recommendations: [
@@ -33,6 +39,13 @@ const simulatePrediction = (crop: string, area: number): PredictionResult => {
       "Consider drip irrigation to improve water use efficiency by 30-40%",
       `Apply ${Math.round(80 + Math.random() * 40)} kg/ha nitrogen for best results`,
       "Monitor for pest activity during flowering stage",
+      "Use certified seeds for 10-15% higher germination rate",
+    ],
+    comparison: [
+      { label: "National Avg", value: Math.round(base * 0.85 * 100) / 100 },
+      { label: "State Avg", value: Math.round(base * 0.92 * 100) / 100 },
+      { label: "Your Prediction", value: yieldPerHa },
+      { label: "Best Practice", value: Math.round(base * 1.15 * 100) / 100 },
     ],
   };
 };
@@ -51,10 +64,17 @@ const Predict = () => {
   const handlePredict = () => {
     if (!crop || !area) return;
     setLoading(true);
+    setResult(null);
     setTimeout(() => {
       setResult(simulatePrediction(crop, parseFloat(area)));
       setLoading(false);
-    }, 1500);
+    }, 2000);
+  };
+
+  const riskConfig = {
+    Low: { icon: ShieldCheck, className: "bg-primary/15 text-primary border-primary/20" },
+    Medium: { icon: AlertTriangle, className: "bg-secondary/15 text-secondary border-secondary/20" },
+    High: { icon: AlertTriangle, className: "bg-destructive/15 text-destructive border-destructive/20" },
   };
 
   return (
@@ -70,7 +90,7 @@ const Predict = () => {
 
       <div className="grid lg:grid-cols-5 gap-8 max-w-6xl mx-auto">
         {/* Form */}
-        <Card className="lg:col-span-2 p-6 shadow-card border-border">
+        <Card className="lg:col-span-2 p-6 shadow-card border-border h-fit">
           <h3 className="font-serif text-xl font-semibold text-foreground mb-5">Input Parameters</h3>
           <div className="space-y-4">
             <div>
@@ -135,7 +155,11 @@ const Predict = () => {
 
         {/* Results */}
         <div className="lg:col-span-3 space-y-6">
-          {!result ? (
+          {loading ? (
+            <div className="flex items-center justify-center min-h-[400px] rounded-xl border border-border bg-card/50">
+              <LoadingSpinner />
+            </div>
+          ) : !result ? (
             <div className="flex flex-col items-center justify-center h-full min-h-[400px] rounded-xl border border-dashed border-border bg-card/50 p-10 text-center">
               <Leaf className="h-16 w-16 text-muted-foreground/30 mb-4" />
               <h3 className="font-serif text-xl text-muted-foreground mb-2">No Prediction Yet</h3>
@@ -153,13 +177,14 @@ const Predict = () => {
                     <div className="text-4xl md:text-5xl font-serif font-bold">
                       {result.yield} <span className="text-2xl font-sans font-normal text-primary-foreground/70">tonnes</span>
                     </div>
+                    <p className="text-primary-foreground/60 text-sm mt-1">{result.yieldPerHa} tonnes/ha × {area} ha</p>
                   </div>
                   <div className="text-right">
                     <div className="text-sm text-primary-foreground/70 mb-1">Confidence</div>
                     <div className="text-2xl font-serif font-bold">{result.confidence}%</div>
                   </div>
                 </div>
-                <div className="flex items-center gap-4 mt-5 pt-5 border-t border-primary-foreground/20">
+                <div className="flex flex-wrap items-center gap-4 mt-5 pt-5 border-t border-primary-foreground/20">
                   <div className="flex items-center gap-2">
                     <ThermometerSun className="h-4 w-4" />
                     <span className="text-sm">{temperature || "28"}°C</span>
@@ -168,20 +193,41 @@ const Predict = () => {
                     <Droplets className="h-4 w-4" />
                     <span className="text-sm">{rainfall || "800"}mm</span>
                   </div>
-                  <div className={`ml-auto px-3 py-1 rounded-full text-xs font-medium ${
-                    result.riskLevel === "Low"
-                      ? "bg-primary-foreground/20"
-                      : result.riskLevel === "Medium"
-                      ? "bg-secondary/30"
-                      : "bg-destructive/30"
-                  }`}>
-                    {result.riskLevel} Risk
-                  </div>
+                  {season && (
+                    <div className="text-sm text-primary-foreground/70">{season} Season</div>
+                  )}
+                  {(() => {
+                    const risk = riskConfig[result.riskLevel as keyof typeof riskConfig];
+                    return (
+                      <div className={`ml-auto px-3 py-1 rounded-full text-xs font-medium border flex items-center gap-1.5 ${risk.className}`}>
+                        <risk.icon className="h-3 w-3" />
+                        {result.riskLevel} Risk
+                      </div>
+                    );
+                  })()}
                 </div>
               </Card>
 
+              {/* Yield Comparison Chart */}
+              <Card className="p-6 shadow-card border-border animate-fade-up" style={{ animationDelay: "0.1s" }}>
+                <h3 className="font-serif text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                  Yield Comparison (tonnes/ha)
+                </h3>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={result.comparison} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(45, 15%, 85%)" horizontal={false} />
+                    <XAxis type="number" tick={{ fontSize: 12, fill: "hsl(150, 10%, 40%)" }} />
+                    <YAxis dataKey="label" type="category" width={110} tick={{ fontSize: 12, fill: "hsl(150, 10%, 40%)" }} />
+                    <Tooltip contentStyle={{ borderRadius: "8px", border: "1px solid hsl(45, 15%, 85%)", fontSize: 13 }} />
+                    <Bar dataKey="value" radius={[0, 6, 6, 0]} fill="hsl(142, 45%, 28%)">
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </Card>
+
               {/* Recommendations */}
-              <Card className="p-6 shadow-card border-border animate-fade-up" style={{ animationDelay: "0.15s" }}>
+              <Card className="p-6 shadow-card border-border animate-fade-up" style={{ animationDelay: "0.2s" }}>
                 <h3 className="font-serif text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-primary" />
                   Optimization Recommendations
