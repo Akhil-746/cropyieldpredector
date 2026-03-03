@@ -150,16 +150,19 @@ const simulateImageAnalysis = async (imageSrc: string): Promise<PredictionResult
   const colors = await analyzeImageColors(imageSrc);
   const { greenRatio, brownRatio, yellowRatio, darkRatio } = colors;
 
-  const isLand = (brownRatio + darkRatio) > 0.45 && greenRatio < 0.15;
-  const isHealthy = greenRatio > 0.35 && yellowRatio < 0.08 && brownRatio < 0.15;
-  const isMild = greenRatio > 0.2 && (yellowRatio > 0.05 || brownRatio > 0.1);
-  const isDiseased = yellowRatio > 0.12 || (brownRatio > 0.25 && greenRatio < 0.25);
+  console.log("Color analysis:", { greenRatio: greenRatio.toFixed(3), brownRatio: brownRatio.toFixed(3), yellowRatio: yellowRatio.toFixed(3), darkRatio: darkRatio.toFixed(3) });
+
+  // More relaxed land detection — if green is low and brown/dark dominates
+  const isLand = greenRatio < 0.25 && (brownRatio + darkRatio) > 0.25;
+  // Healthy crop — dominated by green with minimal yellow/brown
+  const isHealthy = greenRatio > 0.3 && yellowRatio < 0.1 && brownRatio < 0.18;
+  const isDiseased = yellowRatio > 0.15 || (brownRatio > 0.3 && greenRatio < 0.2);
 
   // LAND / SOIL image
   if (isLand) {
     const soilQualities: Array<"Excellent" | "Good" | "Average" | "Poor"> = ["Excellent", "Good", "Average", "Poor"];
-    const qualityIdx = darkRatio > 0.3 ? 0 : brownRatio > 0.35 ? 1 : brownRatio > 0.2 ? 2 : 3;
-    const moisture = darkRatio > 0.25 ? "High (Well-irrigated)" : darkRatio > 0.15 ? "Moderate" : "Low (Needs irrigation)";
+    const qualityIdx = darkRatio > 0.3 ? 0 : brownRatio > 0.3 ? 1 : brownRatio > 0.15 ? 2 : 3;
+    const moisture = darkRatio > 0.2 ? "High (Well-irrigated)" : darkRatio > 0.1 ? "Moderate" : "Low (Needs irrigation)";
 
     const suitableCropsMap: Record<string, string[]> = {
       Excellent: ["Rice", "Wheat", "Sugarcane", "Maize", "Cotton"],
@@ -183,7 +186,7 @@ const simulateImageAnalysis = async (imageSrc: string): Promise<PredictionResult
         suitableCrops: suitableCropsMap[quality],
         recommendations: [
           quality === "Poor" ? "Add organic compost (FYM) at 10-15 tonnes/hectare to improve fertility" : "Soil appears fertile — maintain with balanced NPK fertilization",
-          darkRatio < 0.15 ? "Install drip irrigation to conserve water and improve moisture" : "Moisture levels look good — avoid over-watering",
+          darkRatio < 0.1 ? "Install drip irrigation to conserve water and improve moisture" : "Moisture levels look good — avoid over-watering",
           "Get a professional soil test for pH, nitrogen, phosphorus, and potassium levels",
           "Consider crop rotation to maintain soil health and prevent nutrient depletion",
           "Add mulching layer to retain moisture and suppress weeds",
@@ -202,17 +205,13 @@ const simulateImageAnalysis = async (imageSrc: string): Promise<PredictionResult
 
   if (isHealthy) {
     healthStatus = "Healthy";
-    // No diseases, no pesticides needed
-  } else if (isMild && !isDiseased) {
-    healthStatus = "Mild Issue";
-    diseases = [data.diseases[Math.floor(Math.random() * data.diseases.length)]];
-    diseases[0] = { ...diseases[0], severity: "Low", confidence: Math.round(60 + Math.random() * 15) };
-    pesticides = [data.pesticides[0]];
+    // No diseases, no pesticides — crop is good!
   } else if (isDiseased) {
-    healthStatus = yellowRatio > 0.2 || brownRatio > 0.35 ? "Severely Affected" : "Diseased";
+    healthStatus = yellowRatio > 0.25 || brownRatio > 0.4 ? "Severely Affected" : "Diseased";
     diseases = data.diseases;
     pesticides = data.pesticides;
   } else {
+    // Mild — some minor signs
     healthStatus = "Mild Issue";
     diseases = [{ ...data.diseases[0], severity: "Low", confidence: Math.round(55 + Math.random() * 20) }];
     pesticides = [data.pesticides[0]];
@@ -333,7 +332,7 @@ const Predict = () => {
           Crop Disease <span className="text-gradient-primary">Detection</span>
         </h1>
         <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-          Upload a photo of your crop leaf or plant — our AI will identify diseases and suggest effective pesticides with costs.
+          Upload a photo of your crop leaf, plant, or land — our AI will detect diseases, confirm healthy crops, analyze soil quality, and suggest pesticides with costs.
         </p>
       </div>
 
