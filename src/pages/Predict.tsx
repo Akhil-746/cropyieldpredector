@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Upload, Camera, X, Leaf, CheckCircle2, TrendingUp, AlertTriangle, ShieldCheck, Bug, IndianRupee, Sparkles } from "lucide-react";
+import { Upload, Camera, X, Leaf, CheckCircle2, TrendingUp, AlertTriangle, ShieldCheck, Bug, IndianRupee, Sparkles, Sprout, Mountain } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
@@ -22,12 +22,19 @@ interface Pesticide {
 }
 
 interface PredictionResult {
+  imageType: "crop" | "land";
   cropDetected: string;
   healthStatus: "Healthy" | "Mild Issue" | "Diseased" | "Severely Affected";
   overallConfidence: number;
   diseases: Disease[];
   pesticides: Pesticide[];
   careTips: string[];
+  soilAnalysis?: {
+    quality: "Excellent" | "Good" | "Average" | "Poor";
+    moisture: string;
+    suitableCrops: string[];
+    recommendations: string[];
+  };
 }
 
 const cropDiseaseDB: Record<string, { diseases: Disease[]; pesticides: Pesticide[] }> = {
@@ -101,11 +108,115 @@ const cropDiseaseDB: Record<string, { diseases: Disease[]; pesticides: Pesticide
 
 const allCropKeys = Object.keys(cropDiseaseDB);
 
-const simulateImageAnalysis = (): PredictionResult => {
+// Analyze image pixels to determine dominant colors
+const analyzeImageColors = (imageSrc: string): Promise<{ greenRatio: number; brownRatio: number; yellowRatio: number; darkRatio: number }> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const size = 100; // sample at 100x100 for speed
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, size, size);
+      const data = ctx.getImageData(0, 0, size, size).data;
+      let green = 0, brown = 0, yellow = 0, dark = 0, total = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i], g = data[i + 1], b = data[i + 2];
+        total++;
+        // Green detection (vegetation)
+        if (g > r && g > b && g > 60) green++;
+        // Brown/soil detection
+        else if (r > 80 && g > 40 && g < r && b < g && r - b > 30) brown++;
+        // Yellow detection (diseased/dry)
+        else if (r > 150 && g > 120 && b < 80) yellow++;
+        // Dark (soil/shadow)
+        else if (r < 70 && g < 70 && b < 70) dark++;
+      }
+      resolve({
+        greenRatio: green / total,
+        brownRatio: brown / total,
+        yellowRatio: yellow / total,
+        darkRatio: dark / total,
+      });
+    };
+    img.onerror = () => resolve({ greenRatio: 0.3, brownRatio: 0.3, yellowRatio: 0.1, darkRatio: 0.1 });
+    img.src = imageSrc;
+  });
+};
+
+const simulateImageAnalysis = async (imageSrc: string): Promise<PredictionResult> => {
+  const colors = await analyzeImageColors(imageSrc);
+  const { greenRatio, brownRatio, yellowRatio, darkRatio } = colors;
+
+  const isLand = (brownRatio + darkRatio) > 0.45 && greenRatio < 0.15;
+  const isHealthy = greenRatio > 0.35 && yellowRatio < 0.08 && brownRatio < 0.15;
+  const isMild = greenRatio > 0.2 && (yellowRatio > 0.05 || brownRatio > 0.1);
+  const isDiseased = yellowRatio > 0.12 || (brownRatio > 0.25 && greenRatio < 0.25);
+
+  // LAND / SOIL image
+  if (isLand) {
+    const soilQualities: Array<"Excellent" | "Good" | "Average" | "Poor"> = ["Excellent", "Good", "Average", "Poor"];
+    const qualityIdx = darkRatio > 0.3 ? 0 : brownRatio > 0.35 ? 1 : brownRatio > 0.2 ? 2 : 3;
+    const moisture = darkRatio > 0.25 ? "High (Well-irrigated)" : darkRatio > 0.15 ? "Moderate" : "Low (Needs irrigation)";
+
+    const suitableCropsMap: Record<string, string[]> = {
+      Excellent: ["Rice", "Wheat", "Sugarcane", "Maize", "Cotton"],
+      Good: ["Wheat", "Maize", "Potato", "Tomato"],
+      Average: ["Maize", "Cotton", "Groundnut"],
+      Poor: ["Millet", "Sorghum", "Drought-resistant varieties"],
+    };
+
+    const quality = soilQualities[qualityIdx];
+    return {
+      imageType: "land",
+      cropDetected: "Soil / Land",
+      healthStatus: "Healthy",
+      overallConfidence: Math.round(78 + Math.random() * 18),
+      diseases: [],
+      pesticides: [],
+      careTips: [],
+      soilAnalysis: {
+        quality,
+        moisture,
+        suitableCrops: suitableCropsMap[quality],
+        recommendations: [
+          quality === "Poor" ? "Add organic compost (FYM) at 10-15 tonnes/hectare to improve fertility" : "Soil appears fertile — maintain with balanced NPK fertilization",
+          darkRatio < 0.15 ? "Install drip irrigation to conserve water and improve moisture" : "Moisture levels look good — avoid over-watering",
+          "Get a professional soil test for pH, nitrogen, phosphorus, and potassium levels",
+          "Consider crop rotation to maintain soil health and prevent nutrient depletion",
+          "Add mulching layer to retain moisture and suppress weeds",
+        ],
+      },
+    };
+  }
+
+  // CROP image — determine health
   const randomCrop = allCropKeys[Math.floor(Math.random() * allCropKeys.length)];
   const data = cropDiseaseDB[randomCrop];
-  const statuses: PredictionResult["healthStatus"][] = ["Healthy", "Mild Issue", "Diseased", "Severely Affected"];
-  const status = statuses[1 + Math.floor(Math.random() * 3)]; // skip "Healthy" for demo
+
+  let healthStatus: PredictionResult["healthStatus"];
+  let diseases: Disease[] = [];
+  let pesticides: Pesticide[] = [];
+
+  if (isHealthy) {
+    healthStatus = "Healthy";
+    // No diseases, no pesticides needed
+  } else if (isMild && !isDiseased) {
+    healthStatus = "Mild Issue";
+    diseases = [data.diseases[Math.floor(Math.random() * data.diseases.length)]];
+    diseases[0] = { ...diseases[0], severity: "Low", confidence: Math.round(60 + Math.random() * 15) };
+    pesticides = [data.pesticides[0]];
+  } else if (isDiseased) {
+    healthStatus = yellowRatio > 0.2 || brownRatio > 0.35 ? "Severely Affected" : "Diseased";
+    diseases = data.diseases;
+    pesticides = data.pesticides;
+  } else {
+    healthStatus = "Mild Issue";
+    diseases = [{ ...data.diseases[0], severity: "Low", confidence: Math.round(55 + Math.random() * 20) }];
+    pesticides = [data.pesticides[0]];
+  }
 
   const careTips: Record<string, string[]> = {
     rice: [
@@ -146,13 +257,21 @@ const simulateImageAnalysis = (): PredictionResult => {
     ],
   };
 
+  const healthyTips = [
+    "Your crop looks healthy! Continue regular monitoring every 7-10 days",
+    "Maintain current watering and fertilization schedule",
+    "Apply preventive neem oil spray (3ml/L) bi-weekly to stay disease-free",
+    "Ensure proper weeding to reduce pest habitats",
+  ];
+
   return {
+    imageType: "crop",
     cropDetected: randomCrop.charAt(0).toUpperCase() + randomCrop.slice(1),
-    healthStatus: status,
-    overallConfidence: Math.round(85 + Math.random() * 12),
-    diseases: data.diseases,
-    pesticides: data.pesticides,
-    careTips: careTips[randomCrop] || careTips.rice,
+    healthStatus,
+    overallConfidence: Math.round(80 + Math.random() * 17),
+    diseases,
+    pesticides,
+    careTips: healthStatus === "Healthy" ? healthyTips : (careTips[randomCrop] || careTips.rice),
   };
 };
 
@@ -162,11 +281,11 @@ const severityConfig = {
   High: { icon: AlertTriangle, className: "bg-destructive/15 text-destructive border-destructive/30" },
 };
 
-const healthConfig: Record<string, string> = {
-  Healthy: "bg-primary/15 text-primary",
-  "Mild Issue": "bg-secondary/15 text-secondary-foreground",
-  Diseased: "bg-destructive/15 text-destructive",
-  "Severely Affected": "bg-destructive/20 text-destructive",
+const healthConfig: Record<string, { bg: string; label: string; icon: any }> = {
+  Healthy: { bg: "bg-primary/15 text-primary", label: "✅ No Disease Detected — Crop is Healthy!", icon: CheckCircle2 },
+  "Mild Issue": { bg: "bg-secondary/15 text-secondary-foreground", label: "⚠️ Mild Issue Detected", icon: AlertTriangle },
+  Diseased: { bg: "bg-destructive/15 text-destructive", label: "🔴 Disease Detected", icon: Bug },
+  "Severely Affected": { bg: "bg-destructive/20 text-destructive", label: "🚨 Severely Affected", icon: Bug },
 };
 
 const Predict = () => {
@@ -186,14 +305,15 @@ const Predict = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
     if (!image) return;
     setLoading(true);
     setResult(null);
-    setTimeout(() => {
-      setResult(simulateImageAnalysis());
-      setLoading(false);
-    }, 2500);
+    // Small delay for UX + actual image analysis
+    await new Promise(r => setTimeout(r, 1500));
+    const prediction = await simulateImageAnalysis(image);
+    setResult(prediction);
+    setLoading(false);
   };
 
   const clearImage = () => {
@@ -299,97 +419,162 @@ const Predict = () => {
           ) : (
             <>
               {/* Detection Summary */}
-              <Card className="gradient-hero text-primary-foreground p-7 shadow-elevated border-0 animate-scale-in">
+              <Card className={`p-7 shadow-elevated border-0 animate-scale-in ${result.imageType === "land" ? "bg-gradient-to-br from-amber-800 to-amber-950 text-white" : "gradient-hero text-primary-foreground"}`}>
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-primary-foreground/70 text-sm mb-1">Crop Detected</p>
-                    <div className="text-3xl md:text-4xl font-serif font-bold">{result.cropDetected}</div>
+                    <p className="opacity-70 text-sm mb-1">{result.imageType === "land" ? "Image Type" : "Crop Detected"}</p>
+                    <div className="text-3xl md:text-4xl font-serif font-bold flex items-center gap-3">
+                      {result.imageType === "land" ? <Mountain className="h-8 w-8" /> : <Sprout className="h-8 w-8" />}
+                      {result.cropDetected}
+                    </div>
                     <div className="mt-2">
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${healthConfig[result.healthStatus]}`}>
-                        {result.healthStatus}
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${healthConfig[result.healthStatus].bg}`}>
+                        {healthConfig[result.healthStatus].label}
                       </span>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm text-primary-foreground/70 mb-1">Confidence</div>
+                    <div className="text-sm opacity-70 mb-1">Confidence</div>
                     <div className="text-2xl font-serif font-bold">{result.overallConfidence}%</div>
                   </div>
                 </div>
               </Card>
 
-              {/* Diseases Detected */}
-              <Card className="p-6 shadow-card border-border animate-fade-up" style={{ animationDelay: "0.1s" }}>
-                <h3 className="font-serif text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <Bug className="h-5 w-5 text-destructive" />
-                  Diseases Detected
-                </h3>
-                <div className="space-y-4">
-                  {result.diseases.map((disease, i) => {
-                    const sev = severityConfig[disease.severity];
-                    return (
-                      <div key={i} className="p-4 rounded-lg border border-border bg-muted/30">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-semibold text-foreground">{disease.name}</h4>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-xs">
-                              {disease.confidence}% match
-                            </Badge>
-                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border flex items-center gap-1 ${sev.className}`}>
-                              <sev.icon className="h-3 w-3" />
-                              {disease.severity}
-                            </span>
+              {/* Soil Analysis (for land images) */}
+              {result.soilAnalysis && (
+                <Card className="p-6 shadow-card border-border animate-fade-up" style={{ animationDelay: "0.1s" }}>
+                  <h3 className="font-serif text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                    <Mountain className="h-5 w-5 text-primary" />
+                    Soil & Land Analysis
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4 mb-5">
+                    <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                      <p className="text-xs text-muted-foreground mb-1">Soil Quality</p>
+                      <p className="font-bold text-foreground text-lg">{result.soilAnalysis.quality}</p>
+                    </div>
+                    <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                      <p className="text-xs text-muted-foreground mb-1">Moisture Level</p>
+                      <p className="font-bold text-foreground text-lg">{result.soilAnalysis.moisture}</p>
+                    </div>
+                  </div>
+                  <div className="mb-5">
+                    <p className="text-sm font-semibold text-foreground mb-2">🌾 Suitable Crops for this Soil:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {result.soilAnalysis.suitableCrops.map((crop, i) => (
+                        <Badge key={i} variant="secondary" className="text-sm px-3 py-1">{crop}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground mb-3">📋 Recommendations:</p>
+                    <div className="space-y-3">
+                      {result.soilAnalysis.recommendations.map((rec, i) => (
+                        <div key={i} className="flex gap-3 items-start">
+                          <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                          <p className="text-sm text-foreground/80">{rec}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {/* Healthy Crop Message */}
+              {result.healthStatus === "Healthy" && result.imageType === "crop" && (
+                <Card className="p-6 shadow-card border-border animate-fade-up bg-primary/5" style={{ animationDelay: "0.1s" }}>
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+                      <CheckCircle2 className="h-8 w-8 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-serif text-lg font-semibold text-foreground">Great News! Your Crop is Healthy 🎉</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        No disease or pest infestation detected. Your {result.cropDetected.toLowerCase()} crop appears to be in good condition. Keep up the good agricultural practices!
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {/* Diseases Detected (only if diseases found) */}
+              {result.diseases.length > 0 && (
+                <Card className="p-6 shadow-card border-border animate-fade-up" style={{ animationDelay: "0.1s" }}>
+                  <h3 className="font-serif text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                    <Bug className="h-5 w-5 text-destructive" />
+                    Diseases Detected
+                  </h3>
+                  <div className="space-y-4">
+                    {result.diseases.map((disease, i) => {
+                      const sev = severityConfig[disease.severity];
+                      return (
+                        <div key={i} className="p-4 rounded-lg border border-border bg-muted/30">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-semibold text-foreground">{disease.name}</h4>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-xs">
+                                {disease.confidence}% match
+                              </Badge>
+                              <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border flex items-center gap-1 ${sev.className}`}>
+                                <sev.icon className="h-3 w-3" />
+                                {disease.severity}
+                              </span>
+                            </div>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{disease.description}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card>
+              )}
+
+              {/* Pesticide Suggestions (only if pesticides recommended) */}
+              {result.pesticides.length > 0 && (
+                <Card className="p-6 shadow-card border-border animate-fade-up" style={{ animationDelay: "0.2s" }}>
+                  <h3 className="font-serif text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                    <IndianRupee className="h-5 w-5 text-primary" />
+                    Recommended Pesticides & Costs
+                  </h3>
+                  <div className="space-y-4">
+                    {result.pesticides.map((pest, i) => (
+                      <div key={i} className="p-4 rounded-lg border border-border bg-card hover:shadow-soft transition-shadow">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h4 className="font-semibold text-foreground text-sm">{pest.name}</h4>
+                            <p className="text-xs text-muted-foreground">{pest.brand}</p>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-primary text-lg">{pest.cost}</div>
+                            <div className="text-xs text-secondary-foreground">{renderStars(pest.rating)}</div>
                           </div>
                         </div>
-                        <p className="text-sm text-muted-foreground">{disease.description}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </Card>
-
-              {/* Pesticide Suggestions */}
-              <Card className="p-6 shadow-card border-border animate-fade-up" style={{ animationDelay: "0.2s" }}>
-                <h3 className="font-serif text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <IndianRupee className="h-5 w-5 text-primary" />
-                  Recommended Pesticides & Costs
-                </h3>
-                <div className="space-y-4">
-                  {result.pesticides.map((pest, i) => (
-                    <div key={i} className="p-4 rounded-lg border border-border bg-card hover:shadow-soft transition-shadow">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h4 className="font-semibold text-foreground text-sm">{pest.name}</h4>
-                          <p className="text-xs text-muted-foreground">{pest.brand}</p>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-bold text-primary text-lg">{pest.cost}</div>
-                          <div className="text-xs text-secondary-foreground">{renderStars(pest.rating)}</div>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          <Badge variant="secondary" className="text-xs">{pest.type}</Badge>
+                          <Badge variant="outline" className="text-xs">Dosage: {pest.dosage}</Badge>
                         </div>
                       </div>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        <Badge variant="secondary" className="text-xs">{pest.type}</Badge>
-                        <Badge variant="outline" className="text-xs">Dosage: {pest.dosage}</Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
+                    ))}
+                  </div>
+                </Card>
+              )}
 
               {/* Care Tips */}
-              <Card className="p-6 shadow-card border-border animate-fade-up" style={{ animationDelay: "0.3s" }}>
-                <h3 className="font-serif text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-primary" />
-                  Care & Prevention Tips
-                </h3>
-                <div className="space-y-3">
-                  {result.careTips.map((tip, i) => (
-                    <div key={i} className="flex gap-3 items-start">
-                      <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <p className="text-sm text-foreground/80">{tip}</p>
-                    </div>
-                  ))}
-                </div>
-              </Card>
+              {result.careTips.length > 0 && (
+                <Card className="p-6 shadow-card border-border animate-fade-up" style={{ animationDelay: "0.3s" }}>
+                  <h3 className="font-serif text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    {result.healthStatus === "Healthy" ? "Maintenance Tips" : "Care & Prevention Tips"}
+                  </h3>
+                  <div className="space-y-3">
+                    {result.careTips.map((tip, i) => (
+                      <div key={i} className="flex gap-3 items-start">
+                        <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                        <p className="text-sm text-foreground/80">{tip}</p>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
             </>
           )}
         </div>
