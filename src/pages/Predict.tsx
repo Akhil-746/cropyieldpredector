@@ -1,8 +1,9 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Upload, Camera, X, Leaf, CheckCircle2, TrendingUp, AlertTriangle, ShieldCheck, Bug, IndianRupee, Sparkles, Sprout, Mountain } from "lucide-react";
+import { Upload, Camera, X, Leaf, CheckCircle2, TrendingUp, AlertTriangle, ShieldCheck, Bug, IndianRupee, Sparkles, Sprout, Mountain, Droplets, ThermometerSun, Wind, Clock, FileSearch, Microscope } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import LoadingSpinner from "@/components/LoadingSpinner";
 
 interface Disease {
@@ -19,6 +20,7 @@ interface Pesticide {
   dosage: string;
   cost: string;
   rating: number;
+  applicationMethod: string;
 }
 
 interface PredictionResult {
@@ -29,9 +31,13 @@ interface PredictionResult {
   diseases: Disease[];
   pesticides: Pesticide[];
   careTips: string[];
+  nutrientInfo?: { nitrogen: string; phosphorus: string; potassium: string };
   soilAnalysis?: {
     quality: "Excellent" | "Good" | "Average" | "Poor";
     moisture: string;
+    phLevel: string;
+    texture: string;
+    organicMatter: string;
     suitableCrops: string[];
     recommendations: string[];
   };
@@ -40,135 +46,195 @@ interface PredictionResult {
 const cropDiseaseDB: Record<string, { diseases: Disease[]; pesticides: Pesticide[] }> = {
   rice: {
     diseases: [
-      { name: "Rice Blast", confidence: 92, severity: "High", description: "Fungal disease causing diamond-shaped lesions on leaves, reducing grain yield significantly." },
-      { name: "Brown Spot", confidence: 78, severity: "Medium", description: "Causes oval brown spots on leaves, often linked to nutrient-deficient soils." },
+      { name: "Rice Blast (Magnaporthe oryzae)", confidence: 92, severity: "High", description: "Fungal disease causing diamond-shaped lesions on leaves with gray centers and dark borders. Can destroy entire fields if untreated. Spreads rapidly in humid, warm conditions (25-28°C)." },
+      { name: "Brown Spot (Bipolaris oryzae)", confidence: 78, severity: "Medium", description: "Causes oval brown spots with yellow halos on leaves. Often linked to nutrient-deficient soils, particularly zinc and potassium deficiency." },
+      { name: "Bacterial Leaf Blight (Xanthomonas oryzae)", confidence: 74, severity: "High", description: "Water-soaked lesions turning white-yellow along leaf margins. Major disease in South and Southeast Asia during monsoon season." },
     ],
     pesticides: [
-      { name: "Tricyclazole 75% WP", brand: "Baan (Dow)", type: "Fungicide", dosage: "0.6 g/L water", cost: "₹320 / 100g", rating: 4.5 },
-      { name: "Carbendazim 50% WP", brand: "Bavistin (BASF)", type: "Fungicide", dosage: "1 g/L water", cost: "₹180 / 100g", rating: 4.2 },
-      { name: "Isoprothiolane 40% EC", brand: "Fujione (Bayer)", type: "Fungicide", dosage: "1.5 ml/L water", cost: "₹550 / 250ml", rating: 4.0 },
+      { name: "Tricyclazole 75% WP", brand: "Baan (Dow AgroSciences)", type: "Systemic Fungicide", dosage: "0.6 g/L water", cost: "₹320 / 100g", rating: 4.5, applicationMethod: "Foliar spray at 15-day intervals during tillering stage" },
+      { name: "Carbendazim 50% WP", brand: "Bavistin (BASF)", type: "Broad-spectrum Fungicide", dosage: "1 g/L water", cost: "₹180 / 100g", rating: 4.2, applicationMethod: "Mix with water and spray on affected leaves early morning" },
+      { name: "Isoprothiolane 40% EC", brand: "Fujione (Bayer CropScience)", type: "Systemic Fungicide", dosage: "1.5 ml/L water", cost: "₹550 / 250ml", rating: 4.0, applicationMethod: "Spray at first sign of blast lesions, repeat after 10 days" },
     ],
   },
   wheat: {
     diseases: [
-      { name: "Yellow Rust", confidence: 88, severity: "High", description: "Stripe-like yellow pustules on leaves. Spreads rapidly in cool, humid conditions." },
-      { name: "Loose Smut", confidence: 72, severity: "Medium", description: "Replaces grain heads with black powdery spores, causing significant yield loss." },
+      { name: "Yellow Rust (Puccinia striiformis)", confidence: 88, severity: "High", description: "Stripe-like yellow pustules arranged in rows on leaves. Spreads rapidly in cool (10-15°C), humid conditions. Can cause 40-100% yield loss." },
+      { name: "Loose Smut (Ustilago tritici)", confidence: 72, severity: "Medium", description: "Replaces grain heads with black powdery spores. Seed-borne disease; infected seeds show no external symptoms." },
+      { name: "Powdery Mildew (Blumeria graminis)", confidence: 68, severity: "Medium", description: "White powdery fungal growth on upper leaf surfaces. Favored by high humidity and moderate temperatures." },
     ],
     pesticides: [
-      { name: "Propiconazole 25% EC", brand: "Tilt (Syngenta)", type: "Fungicide", dosage: "1 ml/L water", cost: "₹480 / 250ml", rating: 4.6 },
-      { name: "Tebuconazole 25.9% EC", brand: "Folicur (Bayer)", type: "Fungicide", dosage: "1 ml/L water", cost: "₹620 / 250ml", rating: 4.4 },
-      { name: "Mancozeb 75% WP", brand: "Dithane M-45", type: "Fungicide", dosage: "2.5 g/L water", cost: "₹200 / 250g", rating: 4.1 },
+      { name: "Propiconazole 25% EC", brand: "Tilt (Syngenta)", type: "Triazole Fungicide", dosage: "1 ml/L water", cost: "₹480 / 250ml", rating: 4.6, applicationMethod: "Spray at flag leaf stage; repeat after 15 days if needed" },
+      { name: "Tebuconazole 25.9% EC", brand: "Folicur (Bayer)", type: "Systemic Fungicide", dosage: "1 ml/L water", cost: "₹620 / 250ml", rating: 4.4, applicationMethod: "Preventive spray at boot stage, curative within 3 days of symptoms" },
+      { name: "Mancozeb 75% WP", brand: "Dithane M-45 (Corteva)", type: "Contact Fungicide", dosage: "2.5 g/L water", cost: "₹200 / 250g", rating: 4.1, applicationMethod: "Spray as protective cover before infection; 7-day intervals" },
     ],
   },
   maize: {
     diseases: [
-      { name: "Fall Armyworm", confidence: 95, severity: "High", description: "Devastating pest that feeds on leaves and cobs, spreading rapidly across fields." },
-      { name: "Northern Leaf Blight", confidence: 80, severity: "Medium", description: "Cigar-shaped gray-green lesions on leaves, reducing photosynthesis." },
+      { name: "Fall Armyworm (Spodoptera frugiperda)", confidence: 95, severity: "High", description: "Devastating pest that feeds on leaves and cobs, leaving large ragged holes. Larvae feed inside whorl, making early detection critical. Can destroy 70% of crop." },
+      { name: "Northern Leaf Blight (Exserohilum turcicum)", confidence: 80, severity: "Medium", description: "Cigar-shaped gray-green lesions 2.5-15 cm long on leaves. Reduces photosynthetic area, causing 30-50% yield loss." },
+      { name: "Maize Streak Virus", confidence: 65, severity: "High", description: "Transmitted by leafhoppers; causes narrow chlorotic streaks along leaf veins. No chemical cure — vector control essential." },
     ],
     pesticides: [
-      { name: "Emamectin Benzoate 5% SG", brand: "Proclaim (Syngenta)", type: "Insecticide", dosage: "0.4 g/L water", cost: "₹450 / 100g", rating: 4.7 },
-      { name: "Spinetoram 11.7% SC", brand: "Delegate (Dow)", type: "Insecticide", dosage: "0.5 ml/L water", cost: "₹780 / 100ml", rating: 4.5 },
-      { name: "Chlorantraniliprole 18.5% SC", brand: "Coragen (FMC)", type: "Insecticide", dosage: "0.4 ml/L water", cost: "₹550 / 30ml", rating: 4.8 },
+      { name: "Emamectin Benzoate 5% SG", brand: "Proclaim (Syngenta)", type: "Bio-Insecticide", dosage: "0.4 g/L water", cost: "₹450 / 100g", rating: 4.7, applicationMethod: "Target whorl application during early larval stage; evening spray preferred" },
+      { name: "Spinetoram 11.7% SC", brand: "Delegate (Dow)", type: "Spinosyn Insecticide", dosage: "0.5 ml/L water", cost: "₹780 / 100ml", rating: 4.5, applicationMethod: "Spray directly into whorl using flat fan nozzle" },
+      { name: "Chlorantraniliprole 18.5% SC", brand: "Coragen (FMC)", type: "Anthranilic Diamide", dosage: "0.4 ml/L water", cost: "₹550 / 30ml", rating: 4.8, applicationMethod: "Apply within 5 days of egg hatching; rain-fast within 1 hour" },
     ],
   },
   cotton: {
     diseases: [
-      { name: "Pink Bollworm", confidence: 90, severity: "High", description: "Larvae bore into cotton bolls, destroying fibers and reducing quality." },
-      { name: "Whitefly Infestation", confidence: 85, severity: "Medium", description: "Sap-sucking pest causing yellowing, leaf curl, and sooty mold." },
+      { name: "Pink Bollworm (Pectinophora gossypiella)", confidence: 90, severity: "High", description: "Larvae bore into cotton bolls through flower buds, destroying lint fibers. Most destructive cotton pest in India." },
+      { name: "Whitefly Infestation (Bemisia tabaci)", confidence: 85, severity: "Medium", description: "Sap-sucking pest causing yellowing, leaf curl, and honeydew secretion leading to sooty mold. Vector for Cotton Leaf Curl Virus." },
+      { name: "Alternaria Leaf Spot", confidence: 70, severity: "Low", description: "Small circular brown spots with concentric rings on leaves. Common during humid conditions; manageable with good practices." },
     ],
     pesticides: [
-      { name: "Cypermethrin 25% EC", brand: "Cymbush (Syngenta)", type: "Insecticide", dosage: "1 ml/L water", cost: "₹280 / 250ml", rating: 4.0 },
-      { name: "Acetamiprid 20% SP", brand: "Manik (UPL)", type: "Insecticide", dosage: "0.3 g/L water", cost: "₹350 / 100g", rating: 4.3 },
-      { name: "Neem Oil 1500 PPM", brand: "Neem Azal", type: "Bio-pesticide", dosage: "3 ml/L water", cost: "₹220 / 250ml", rating: 3.8 },
+      { name: "Cypermethrin 25% EC", brand: "Cymbush (Syngenta)", type: "Pyrethroid Insecticide", dosage: "1 ml/L water", cost: "₹280 / 250ml", rating: 4.0, applicationMethod: "Spray during evening hours; avoid mixing with alkaline pesticides" },
+      { name: "Acetamiprid 20% SP", brand: "Manik (UPL)", type: "Neonicotinoid", dosage: "0.3 g/L water", cost: "₹350 / 100g", rating: 4.3, applicationMethod: "Effective against sucking pests; systemic action lasts 14 days" },
+      { name: "Neem Oil 1500 PPM", brand: "Neem Azal (Bio)", type: "Bio-pesticide", dosage: "3 ml/L water", cost: "₹220 / 250ml", rating: 3.8, applicationMethod: "Safe for beneficial insects; spray bi-weekly as preventive" },
     ],
   },
   tomato: {
     diseases: [
-      { name: "Early Blight", confidence: 91, severity: "High", description: "Concentric ring-shaped brown lesions on older leaves, spreading upward." },
-      { name: "Leaf Curl Virus", confidence: 82, severity: "High", description: "Transmitted by whiteflies; causes curling, yellowing, and stunted growth." },
+      { name: "Early Blight (Alternaria solani)", confidence: 91, severity: "High", description: "Concentric ring-shaped brown lesions ('target spots') on older leaves first, spreading upward. Can defoliate plants rapidly." },
+      { name: "Leaf Curl Virus (ToLCV)", confidence: 82, severity: "High", description: "Transmitted by whiteflies; causes severe upward curling, yellowing, stunting. No cure once infected — prevention is key." },
+      { name: "Fusarium Wilt (F. oxysporum)", confidence: 75, severity: "High", description: "Soil-borne fungus causing yellowing from lower leaves upward, wilting on one side. Brown vascular discoloration inside stem." },
     ],
     pesticides: [
-      { name: "Mancozeb 75% WP", brand: "Dithane M-45", type: "Fungicide", dosage: "2.5 g/L water", cost: "₹200 / 250g", rating: 4.1 },
-      { name: "Imidacloprid 17.8% SL", brand: "Confidor (Bayer)", type: "Insecticide", dosage: "0.3 ml/L water", cost: "₹380 / 100ml", rating: 4.4 },
-      { name: "Copper Oxychloride 50% WP", brand: "Blitox (Tata)", type: "Fungicide", dosage: "3 g/L water", cost: "₹250 / 250g", rating: 4.0 },
+      { name: "Mancozeb 75% WP", brand: "Dithane M-45 (Corteva)", type: "Contact Fungicide", dosage: "2.5 g/L water", cost: "₹200 / 250g", rating: 4.1, applicationMethod: "Start at transplanting; spray every 7-10 days during monsoon" },
+      { name: "Imidacloprid 17.8% SL", brand: "Confidor (Bayer)", type: "Systemic Insecticide", dosage: "0.3 ml/L water", cost: "₹380 / 100ml", rating: 4.4, applicationMethod: "Drench soil at transplanting for whitefly control; lasts 30 days" },
+      { name: "Copper Oxychloride 50% WP", brand: "Blitox (Tata Rallis)", type: "Copper Fungicide", dosage: "3 g/L water", cost: "₹250 / 250g", rating: 4.0, applicationMethod: "Mix with water, spray on foliage; avoid during flowering" },
     ],
   },
   potato: {
     diseases: [
-      { name: "Late Blight", confidence: 94, severity: "High", description: "Water-soaked lesions turning brown-black; white mold underneath. Highly destructive." },
-      { name: "Black Scurf", confidence: 70, severity: "Low", description: "Dark, irregular sclerotia on tuber surface affecting market value." },
+      { name: "Late Blight (Phytophthora infestans)", confidence: 94, severity: "High", description: "Water-soaked dark lesions turning brown-black; white cottony mold on undersides. The disease that caused the Irish Potato Famine. Can destroy crop in 7-10 days." },
+      { name: "Black Scurf (Rhizoctonia solani)", confidence: 70, severity: "Low", description: "Dark, irregular sclerotia on tuber surface resembling soil particles. Reduces market grade and consumer appeal." },
+      { name: "Common Scab (Streptomyces scabies)", confidence: 65, severity: "Medium", description: "Rough, corky lesions on tuber skin. Favored by alkaline soils (pH > 5.5) and dry conditions during tuber formation." },
     ],
     pesticides: [
-      { name: "Metalaxyl 8% + Mancozeb 64% WP", brand: "Ridomil Gold (Syngenta)", type: "Fungicide", dosage: "2.5 g/L water", cost: "₹680 / 250g", rating: 4.7 },
-      { name: "Cymoxanil 8% + Mancozeb 64% WP", brand: "Curzate M8 (DuPont)", type: "Fungicide", dosage: "3 g/L water", cost: "₹520 / 250g", rating: 4.3 },
-      { name: "Chlorothalonil 75% WP", brand: "Kavach (Syngenta)", type: "Fungicide", dosage: "2 g/L water", cost: "₹350 / 250g", rating: 4.0 },
+      { name: "Metalaxyl 8% + Mancozeb 64% WP", brand: "Ridomil Gold (Syngenta)", type: "Systemic + Contact", dosage: "2.5 g/L water", cost: "₹680 / 250g", rating: 4.7, applicationMethod: "First spray at 45 days; repeat every 7-10 days during wet weather" },
+      { name: "Cymoxanil 8% + Mancozeb 64% WP", brand: "Curzate M8 (DuPont/Corteva)", type: "Translaminar Fungicide", dosage: "3 g/L water", cost: "₹520 / 250g", rating: 4.3, applicationMethod: "Apply within 2 days of infection for curative action" },
+      { name: "Chlorothalonil 75% WP", brand: "Kavach (Syngenta)", type: "Multi-site Fungicide", dosage: "2 g/L water", cost: "₹350 / 250g", rating: 4.0, applicationMethod: "Preventive spray; excellent rain-fastness; 7-day schedule" },
+    ],
+  },
+  sugarcane: {
+    diseases: [
+      { name: "Red Rot (Colletotrichum falcatum)", confidence: 89, severity: "High", description: "Most destructive sugarcane disease. Internal reddening of cane with white patches. Causes hollow stems and foul smell." },
+      { name: "Smut (Sporisorium scitamineum)", confidence: 76, severity: "Medium", description: "Black whip-like structure emerging from growing point. Reduces cane yield and sugar content significantly." },
+    ],
+    pesticides: [
+      { name: "Carbendazim 50% WP", brand: "Bavistin (BASF)", type: "Systemic Fungicide", dosage: "2 g/L water (sett treatment)", cost: "₹180 / 100g", rating: 4.3, applicationMethod: "Soak setts for 30 minutes before planting for prevention" },
+      { name: "Thiophanate Methyl 70% WP", brand: "Topsin M (UPL)", type: "Benzimidazole Fungicide", dosage: "1.5 g/L water", cost: "₹420 / 250g", rating: 4.1, applicationMethod: "Foliar spray at first symptoms; repeat after 15 days" },
+    ],
+  },
+  soybean: {
+    diseases: [
+      { name: "Soybean Rust (Phakopsora pachyrhizi)", confidence: 87, severity: "High", description: "Tan to reddish-brown pustules on leaf undersides. Can cause 50-80% yield loss. Spreads via wind-borne spores." },
+      { name: "Yellow Mosaic Virus (MYMV)", confidence: 80, severity: "High", description: "Transmitted by whiteflies. Yellow patches on leaves, stunted growth. Major constraint in tropical soybean production." },
+    ],
+    pesticides: [
+      { name: "Hexaconazole 5% EC", brand: "Contaf (Tata Rallis)", type: "Triazole Fungicide", dosage: "2 ml/L water", cost: "₹290 / 250ml", rating: 4.2, applicationMethod: "Spray at R3 stage (beginning pod); repeat after 12-14 days" },
+      { name: "Thiamethoxam 25% WG", brand: "Actara (Syngenta)", type: "Neonicotinoid", dosage: "0.3 g/L water", cost: "₹480 / 100g", rating: 4.5, applicationMethod: "Seed treatment + foliar spray for complete whitefly control" },
+    ],
+  },
+  groundnut: {
+    diseases: [
+      { name: "Tikka Disease (Cercospora arachidicola)", confidence: 85, severity: "Medium", description: "Dark brown circular spots on leaves with yellow halos. Early and late leaf spots together can cause 50% yield loss." },
+      { name: "Stem Rot (Sclerotium rolfsii)", confidence: 73, severity: "High", description: "White fungal growth at soil level causing wilting and plant death. Favored by warm, humid conditions and poor drainage." },
+    ],
+    pesticides: [
+      { name: "Chlorothalonil 75% WP", brand: "Kavach (Syngenta)", type: "Contact Fungicide", dosage: "2 g/L water", cost: "₹350 / 250g", rating: 4.2, applicationMethod: "Preventive spray starting 30 days after sowing; 10-day intervals" },
+      { name: "Carbendazim 12% + Mancozeb 63% WP", brand: "Saaf (UPL)", type: "Combo Fungicide", dosage: "2.5 g/L water", cost: "₹260 / 250g", rating: 4.4, applicationMethod: "Excellent for tikka control; both systemic and contact action" },
+    ],
+  },
+  banana: {
+    diseases: [
+      { name: "Panama Wilt (Fusarium oxysporum f.sp. cubense)", confidence: 91, severity: "High", description: "Soil-borne fungus causing yellowing of outer leaves, splitting of pseudostem, and eventual death. No effective chemical cure — resistant varieties are best solution." },
+      { name: "Sigatoka Leaf Spot (Mycosphaerella spp.)", confidence: 83, severity: "Medium", description: "Black or yellow streaks on leaves progressing to large necrotic spots. Reduces photosynthetic area and fruit quality." },
+    ],
+    pesticides: [
+      { name: "Propiconazole 25% EC", brand: "Tilt (Syngenta)", type: "Triazole Fungicide", dosage: "1 ml/L water", cost: "₹480 / 250ml", rating: 4.5, applicationMethod: "Spray on leaves at 15-day intervals during rainy season" },
+      { name: "Carbendazim 50% WP", brand: "Bavistin (BASF)", type: "Systemic Fungicide", dosage: "2 g/L water (soil drench)", cost: "₹180 / 100g", rating: 4.0, applicationMethod: "Soil drenching around root zone for wilt management" },
+    ],
+  },
+  chili: {
+    diseases: [
+      { name: "Anthracnose (Colletotrichum capsici)", confidence: 90, severity: "High", description: "Sunken dark lesions on fruits with concentric rings. Causes fruit rot and significant post-harvest losses. Seed-borne and rain-splash spread." },
+      { name: "Leaf Curl Complex (ChiLCV)", confidence: 84, severity: "High", description: "Upward curling and puckering of leaves, stunted growth. Transmitted by thrips and whiteflies. No cure — vector management essential." },
+    ],
+    pesticides: [
+      { name: "Azoxystrobin 23% SC", brand: "Amistar (Syngenta)", type: "Strobilurin Fungicide", dosage: "1 ml/L water", cost: "₹680 / 100ml", rating: 4.6, applicationMethod: "Spray at flowering stage; excellent preventive action" },
+      { name: "Fipronil 5% SC", brand: "Regent (BASF)", type: "Phenylpyrazole Insecticide", dosage: "2 ml/L water", cost: "₹340 / 100ml", rating: 4.3, applicationMethod: "Effective against thrips vectors; soil + foliar application" },
     ],
   },
 };
 
 const allCropKeys = Object.keys(cropDiseaseDB);
 
-// Analyze image pixels to determine dominant colors
-const analyzeImageColors = (imageSrc: string): Promise<{ greenRatio: number; brownRatio: number; yellowRatio: number; darkRatio: number }> => {
+// Enhanced color analysis with more categories
+const analyzeImageColors = (imageSrc: string): Promise<{ greenRatio: number; brownRatio: number; yellowRatio: number; darkRatio: number; whiteRatio: number; redRatio: number }> => {
   return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
       const canvas = document.createElement("canvas");
-      const size = 100; // sample at 100x100 for speed
+      const size = 150;
       canvas.width = size;
       canvas.height = size;
       const ctx = canvas.getContext("2d")!;
       ctx.drawImage(img, 0, 0, size, size);
       const data = ctx.getImageData(0, 0, size, size).data;
-      let green = 0, brown = 0, yellow = 0, dark = 0, total = 0;
+      let green = 0, brown = 0, yellow = 0, dark = 0, white = 0, red = 0, total = 0;
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i], g = data[i + 1], b = data[i + 2];
         total++;
-        // Green detection (vegetation)
-        if (g > r && g > b && g > 60) green++;
-        // Brown/soil detection
-        else if (r > 80 && g > 40 && g < r && b < g && r - b > 30) brown++;
-        // Yellow detection (diseased/dry)
-        else if (r > 150 && g > 120 && b < 80) yellow++;
-        // Dark (soil/shadow)
-        else if (r < 70 && g < 70 && b < 70) dark++;
+        if (g > r * 1.1 && g > b * 1.2 && g > 50) green++;
+        else if (r > 80 && g > 40 && g < r * 0.9 && b < g * 0.85 && r - b > 25) brown++;
+        else if (r > 140 && g > 110 && b < 90 && Math.abs(r - g) < 60) yellow++;
+        else if (r < 65 && g < 65 && b < 65) dark++;
+        else if (r > 200 && g > 200 && b > 200) white++;
+        else if (r > 120 && g < 80 && b < 80) red++;
       }
       resolve({
         greenRatio: green / total,
         brownRatio: brown / total,
         yellowRatio: yellow / total,
         darkRatio: dark / total,
+        whiteRatio: white / total,
+        redRatio: red / total,
       });
     };
-    img.onerror = () => resolve({ greenRatio: 0.3, brownRatio: 0.3, yellowRatio: 0.1, darkRatio: 0.1 });
+    img.onerror = () => resolve({ greenRatio: 0.3, brownRatio: 0.3, yellowRatio: 0.1, darkRatio: 0.1, whiteRatio: 0.05, redRatio: 0.02 });
     img.src = imageSrc;
   });
 };
 
 const simulateImageAnalysis = async (imageSrc: string): Promise<PredictionResult> => {
   const colors = await analyzeImageColors(imageSrc);
-  const { greenRatio, brownRatio, yellowRatio, darkRatio } = colors;
+  const { greenRatio, brownRatio, yellowRatio, darkRatio, redRatio } = colors;
 
-  console.log("Color analysis:", { greenRatio: greenRatio.toFixed(3), brownRatio: brownRatio.toFixed(3), yellowRatio: yellowRatio.toFixed(3), darkRatio: darkRatio.toFixed(3) });
+  console.log("Color analysis:", { greenRatio: greenRatio.toFixed(3), brownRatio: brownRatio.toFixed(3), yellowRatio: yellowRatio.toFixed(3), darkRatio: darkRatio.toFixed(3), redRatio: redRatio.toFixed(3) });
 
-  // More relaxed land detection — if green is low and brown/dark dominates
-  const isLand = greenRatio < 0.25 && (brownRatio + darkRatio) > 0.25;
-  // Healthy crop — dominated by green with minimal yellow/brown
-  const isHealthy = greenRatio > 0.3 && yellowRatio < 0.1 && brownRatio < 0.18;
-  const isDiseased = yellowRatio > 0.15 || (brownRatio > 0.3 && greenRatio < 0.2);
+  // Land detection — low green + high brown/dark
+  const isLand = greenRatio < 0.2 && (brownRatio + darkRatio) > 0.2;
+  // Healthy — dominant green, minimal damage colors
+  const isHealthy = greenRatio > 0.25 && yellowRatio < 0.08 && brownRatio < 0.15 && redRatio < 0.05;
+  // Diseased — significant yellow/brown/red presence
+  const isDiseased = yellowRatio > 0.12 || redRatio > 0.08 || (brownRatio > 0.25 && greenRatio < 0.2);
 
-  // LAND / SOIL image
+  // LAND / SOIL
   if (isLand) {
     const soilQualities: Array<"Excellent" | "Good" | "Average" | "Poor"> = ["Excellent", "Good", "Average", "Poor"];
-    const qualityIdx = darkRatio > 0.3 ? 0 : brownRatio > 0.3 ? 1 : brownRatio > 0.15 ? 2 : 3;
-    const moisture = darkRatio > 0.2 ? "High (Well-irrigated)" : darkRatio > 0.1 ? "Moderate" : "Low (Needs irrigation)";
+    const qualityIdx = darkRatio > 0.3 ? 0 : brownRatio > 0.3 ? 1 : brownRatio > 0.12 ? 2 : 3;
+    const moisture = darkRatio > 0.2 ? "High (Well-irrigated)" : darkRatio > 0.08 ? "Moderate" : "Low (Needs irrigation)";
+    const phLevel = darkRatio > 0.25 ? "6.0-7.0 (Slightly Acidic — Ideal)" : brownRatio > 0.3 ? "7.0-7.5 (Neutral)" : "7.5-8.5 (Alkaline — Needs amendment)";
+    const texture = darkRatio > 0.3 ? "Clay Loam (Excellent water retention)" : brownRatio > 0.3 ? "Sandy Loam (Good drainage)" : "Sandy (Low retention)";
+    const organicMatter = darkRatio > 0.25 ? "High (>2.5%)" : darkRatio > 0.1 ? "Medium (1.5-2.5%)" : "Low (<1.5% — add compost)";
 
     const suitableCropsMap: Record<string, string[]> = {
-      Excellent: ["Rice", "Wheat", "Sugarcane", "Maize", "Cotton"],
-      Good: ["Wheat", "Maize", "Potato", "Tomato"],
-      Average: ["Maize", "Cotton", "Groundnut"],
-      Poor: ["Millet", "Sorghum", "Drought-resistant varieties"],
+      Excellent: ["Rice", "Wheat", "Sugarcane", "Maize", "Cotton", "Banana"],
+      Good: ["Wheat", "Maize", "Potato", "Tomato", "Soybean", "Chili"],
+      Average: ["Maize", "Cotton", "Groundnut", "Soybean", "Chili"],
+      Poor: ["Millet", "Sorghum", "Groundnut", "Drought-resistant varieties"],
     };
 
     const quality = soilQualities[qualityIdx];
@@ -176,26 +242,35 @@ const simulateImageAnalysis = async (imageSrc: string): Promise<PredictionResult
       imageType: "land",
       cropDetected: "Soil / Land",
       healthStatus: "Healthy",
-      overallConfidence: Math.round(78 + Math.random() * 18),
+      overallConfidence: Math.round(80 + Math.random() * 16),
       diseases: [],
       pesticides: [],
       careTips: [],
       soilAnalysis: {
         quality,
         moisture,
+        phLevel,
+        texture,
+        organicMatter,
         suitableCrops: suitableCropsMap[quality],
         recommendations: [
-          quality === "Poor" ? "Add organic compost (FYM) at 10-15 tonnes/hectare to improve fertility" : "Soil appears fertile — maintain with balanced NPK fertilization",
-          darkRatio < 0.1 ? "Install drip irrigation to conserve water and improve moisture" : "Moisture levels look good — avoid over-watering",
-          "Get a professional soil test for pH, nitrogen, phosphorus, and potassium levels",
-          "Consider crop rotation to maintain soil health and prevent nutrient depletion",
-          "Add mulching layer to retain moisture and suppress weeds",
+          quality === "Poor"
+            ? "Add organic compost (FYM) at 10-15 tonnes/hectare to improve fertility and soil structure"
+            : "Soil appears fertile — maintain with balanced NPK (120:60:40 kg/ha) fertilization",
+          darkRatio < 0.08
+            ? "Install drip irrigation to conserve water and improve moisture retention"
+            : "Moisture levels look adequate — avoid over-watering to prevent root rot",
+          "Get a professional soil test for pH, EC, nitrogen (N), phosphorus (P), and potassium (K) levels",
+          "Practice crop rotation (legume → cereal → oilseed) to maintain soil health and prevent nutrient depletion",
+          "Add 3-4 inch mulching layer (straw/dry leaves) to retain moisture and suppress weeds",
+          "Consider green manuring with Dhaincha/Sunhemp before Kharif season for nitrogen fixation",
+          brownRatio > 0.3 ? "Add gypsum at 2-3 tonnes/ha if soil is sodic/alkaline" : "Monitor soil health bi-annually with lab testing",
         ],
       },
     };
   }
 
-  // CROP image — determine health
+  // CROP — determine health
   const randomCrop = allCropKeys[Math.floor(Math.random() * allCropKeys.length)];
   const data = cropDiseaseDB[randomCrop];
 
@@ -205,13 +280,11 @@ const simulateImageAnalysis = async (imageSrc: string): Promise<PredictionResult
 
   if (isHealthy) {
     healthStatus = "Healthy";
-    // No diseases, no pesticides — crop is good!
   } else if (isDiseased) {
-    healthStatus = yellowRatio > 0.25 || brownRatio > 0.4 ? "Severely Affected" : "Diseased";
+    healthStatus = (yellowRatio > 0.2 || brownRatio > 0.35 || redRatio > 0.12) ? "Severely Affected" : "Diseased";
     diseases = data.diseases;
     pesticides = data.pesticides;
   } else {
-    // Mild — some minor signs
     healthStatus = "Mild Issue";
     diseases = [{ ...data.diseases[0], severity: "Low", confidence: Math.round(55 + Math.random() * 20) }];
     pesticides = [data.pesticides[0]];
@@ -219,49 +292,91 @@ const simulateImageAnalysis = async (imageSrc: string): Promise<PredictionResult
 
   const careTips: Record<string, string[]> = {
     rice: [
-      "Maintain 2-3 cm standing water during tillering stage",
-      "Apply potash fertilizer before panicle initiation",
-      "Use yellow sticky traps for monitoring stem borers",
-      "Ensure proper spacing (20x15 cm) for air circulation",
+      "Maintain 2-3 cm standing water during tillering stage for optimal growth",
+      "Apply potash fertilizer (MOP 30 kg/ha) before panicle initiation",
+      "Use yellow sticky traps (8/acre) for monitoring stem borers and leaf folders",
+      "Ensure proper spacing (20x15 cm) for air circulation to prevent fungal diseases",
+      "Apply Pseudomonas fluorescens (10g/L) as bio-control agent",
     ],
     wheat: [
-      "Irrigate at crown root initiation (21 days after sowing)",
-      "Apply first dose of nitrogen at sowing time",
-      "Monitor for aphids during ear-head emergence",
-      "Avoid late sowing to reduce rust incidence",
+      "Irrigate at crown root initiation (21 days), tillering, flowering, and grain filling stages",
+      "Apply first dose of nitrogen (urea 65 kg/ha) at sowing, second at first irrigation",
+      "Monitor for aphids during ear-head emergence — spray Dimethoate if >10/ear",
+      "Avoid late sowing (after Nov 25) to reduce rust and terminal heat stress",
+      "Seed treatment with Vitavax Power (2g/kg seed) before sowing",
     ],
     maize: [
-      "Earthing up at 30-35 days to support root anchorage",
-      "Apply zinc sulfate at 25 kg/ha if deficiency observed",
-      "Scout for armyworm early morning or late evening",
-      "Ensure proper drainage to avoid waterlogging",
+      "Earthing up at 30-35 days to support root anchorage and prevent lodging",
+      "Apply zinc sulfate at 25 kg/ha if interveinal chlorosis observed",
+      "Scout for fall armyworm early morning — check whorl of 20 random plants",
+      "Ensure proper drainage; maize is highly sensitive to waterlogging",
+      "Apply Trichogramma cards (8/ha) for biological pest control",
     ],
     cotton: [
-      "Remove and destroy affected bolls immediately",
-      "Install pheromone traps at 5/ha for monitoring",
-      "Spray neem oil as preventive measure every 15 days",
-      "Maintain field hygiene by removing crop debris",
+      "Remove and destroy affected bolls immediately to prevent pest spread",
+      "Install pheromone traps at 5/ha for pink bollworm monitoring from 60 DAS",
+      "Spray neem oil (1500 PPM, 5ml/L) as preventive measure every 15 days",
+      "Maintain field hygiene by removing crop debris after harvest",
+      "Follow refuge crop strategy: plant 20% non-Bt cotton around Bt cotton field",
     ],
     tomato: [
-      "Stake plants to improve air circulation",
-      "Mulch with straw to prevent soil-borne diseases",
-      "Remove infected leaves immediately and destroy",
-      "Use drip irrigation to avoid wetting foliage",
+      "Stake plants properly to improve air circulation and reduce fungal infections",
+      "Mulch with paddy straw (5-7 cm) to prevent soil-borne disease splashing",
+      "Remove infected leaves immediately and destroy — don't compost them",
+      "Use drip irrigation to avoid wetting foliage; morning watering preferred",
+      "Apply Trichoderma viride (4g/L) as soil drench for Fusarium management",
     ],
     potato: [
-      "Hill up soil around plants to protect tubers from light",
-      "Avoid overhead irrigation during humid weather",
-      "Use certified disease-free seed tubers",
-      "Apply prophylactic fungicide spray before disease onset",
+      "Hill up soil (15-20 cm) around plants to protect tubers from greening and sun scald",
+      "Avoid overhead irrigation during humid weather — promotes late blight",
+      "Use only certified disease-free seed tubers from authorized centers",
+      "Apply prophylactic fungicide spray at 45 DAS, before disease onset",
+      "Dehaulm (cut tops) 10-15 days before harvest for skin hardening",
+    ],
+    sugarcane: [
+      "Select healthy setts from disease-free mother crop for planting",
+      "Trash mulching (10-12 cm) between rows to conserve moisture",
+      "Apply Acetobacter + PSB biofertilizers at planting for better nutrient uptake",
+      "Detrash lower dry leaves at 150 days to improve aeration and reduce pests",
+    ],
+    soybean: [
+      "Inoculate seeds with Rhizobium japonicum before sowing for nitrogen fixation",
+      "Maintain plant population of 4-4.5 lakh/ha for optimal yield",
+      "Monitor for girdle beetle at 30-40 DAS — spray if 10% plants affected",
+      "Harvest at physiological maturity (R7 stage) when 95% pods turn brown",
+    ],
+    groundnut: [
+      "Apply gypsum (400 kg/ha) at flowering for better peg and pod development",
+      "Ensure earthing up at 35-40 DAS to cover pegs with soil",
+      "Monitor for leaf miner — use light traps during evening for adult moths",
+      "Harvest when 75-80% pods are mature (dark inner shell)",
+    ],
+    banana: [
+      "Remove suckers leaving only one follower for next season's crop",
+      "Prop heavy bunches with bamboo poles to prevent pseudostem snapping",
+      "Apply potash-rich fertilizer (MOP 300g/plant) at bunch emergence",
+      "Bag bunches with perforated poly bags for better fruit quality and pest protection",
+    ],
+    chili: [
+      "Maintain spacing of 60x45 cm for good air circulation and sunlight penetration",
+      "Apply calcium ammonium nitrate to prevent blossom end rot",
+      "Install blue sticky traps (12/acre) for thrips monitoring",
+      "Harvest red-ripe fruits regularly to promote continuous fruiting",
     ],
   };
 
   const healthyTips = [
-    "Your crop looks healthy! Continue regular monitoring every 7-10 days",
-    "Maintain current watering and fertilization schedule",
+    "✅ Your crop looks healthy! Continue regular monitoring every 7-10 days",
+    "Maintain current watering and fertilization schedule — consistency is key",
     "Apply preventive neem oil spray (3ml/L) bi-weekly to stay disease-free",
-    "Ensure proper weeding to reduce pest habitats",
+    "Ensure proper weeding to reduce pest habitats and nutrient competition",
+    "Monitor weather forecasts — increase vigilance during prolonged rains/humidity",
+    "Take periodic photos to track crop growth and compare over time",
   ];
+
+  const nutrientInfo = healthStatus === "Healthy"
+    ? { nitrogen: "Adequate", phosphorus: "Adequate", potassium: "Adequate" }
+    : { nitrogen: "May need supplementation", phosphorus: "Check with soil test", potassium: "Apply MOP if deficient" };
 
   return {
     imageType: "crop",
@@ -271,6 +386,7 @@ const simulateImageAnalysis = async (imageSrc: string): Promise<PredictionResult
     diseases,
     pesticides,
     careTips: healthStatus === "Healthy" ? healthyTips : (careTips[randomCrop] || careTips.rice),
+    nutrientInfo,
   };
 };
 
@@ -282,20 +398,34 @@ const severityConfig = {
 
 const healthConfig: Record<string, { bg: string; label: string; icon: any }> = {
   Healthy: { bg: "bg-primary/15 text-primary", label: "✅ No Disease Detected — Crop is Healthy!", icon: CheckCircle2 },
-  "Mild Issue": { bg: "bg-secondary/15 text-secondary-foreground", label: "⚠️ Mild Issue Detected", icon: AlertTriangle },
-  Diseased: { bg: "bg-destructive/15 text-destructive", label: "🔴 Disease Detected", icon: Bug },
-  "Severely Affected": { bg: "bg-destructive/20 text-destructive", label: "🚨 Severely Affected", icon: Bug },
+  "Mild Issue": { bg: "bg-secondary/15 text-secondary-foreground", label: "⚠️ Minor Issue Detected", icon: AlertTriangle },
+  Diseased: { bg: "bg-destructive/15 text-destructive", label: "🔴 Disease Detected — Treatment Required", icon: Bug },
+  "Severely Affected": { bg: "bg-destructive/20 text-destructive", label: "🚨 Severely Affected — Urgent Treatment", icon: Bug },
 };
+
+const analysisSteps = [
+  { label: "Preprocessing image...", icon: FileSearch },
+  { label: "Analyzing color patterns...", icon: Microscope },
+  { label: "Detecting vegetation vs soil...", icon: Leaf },
+  { label: "Identifying diseases...", icon: Bug },
+  { label: "Generating recommendations...", icon: Sparkles },
+];
 
 const Predict = () => {
   const [image, setImage] = useState<string | null>(null);
   const [result, setResult] = useState<PredictionResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [analysisStep, setAnalysisStep] = useState(0);
+  const [history, setHistory] = useState<Array<{ image: string; result: PredictionResult; timestamp: Date }>>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      alert("File size must be under 10MB");
+      return;
+    }
     const reader = new FileReader();
     reader.onloadend = () => {
       setImage(reader.result as string);
@@ -308,10 +438,17 @@ const Predict = () => {
     if (!image) return;
     setLoading(true);
     setResult(null);
-    // Small delay for UX + actual image analysis
-    await new Promise(r => setTimeout(r, 1500));
+    setAnalysisStep(0);
+
+    // Simulate step-by-step analysis
+    for (let i = 0; i < analysisSteps.length; i++) {
+      setAnalysisStep(i);
+      await new Promise(r => setTimeout(r, 600));
+    }
+
     const prediction = await simulateImageAnalysis(image);
     setResult(prediction);
+    setHistory(prev => [{ image, result: prediction, timestamp: new Date() }, ...prev].slice(0, 5));
     setLoading(false);
   };
 
@@ -328,20 +465,29 @@ const Predict = () => {
   return (
     <div className="container py-10 md:py-16">
       <div className="text-center mb-10">
-        <h1 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-3">
-          Crop Disease <span className="text-gradient-primary">Detection</span>
+        <div className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-1.5 text-sm text-accent-foreground mb-4">
+          <Microscope className="h-4 w-4" /> AI-Powered Analysis
+        </div>
+        <h1 className="text-3xl md:text-5xl font-serif font-bold text-foreground mb-3">
+          Crop Disease <span className="text-gradient-primary">Detection</span> & <span className="text-gradient-gold">Soil Analysis</span>
         </h1>
-        <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-          Upload a photo of your crop leaf, plant, or land — our AI will detect diseases, confirm healthy crops, analyze soil quality, and suggest pesticides with costs.
+        <p className="text-muted-foreground text-lg max-w-3xl mx-auto">
+          Upload a photo of your crop leaf, plant, or farmland — our AI analyzes pixel-level color patterns to detect diseases, confirm healthy crops, analyze soil quality, and recommend pesticides with costs.
         </p>
+        <div className="flex flex-wrap items-center justify-center gap-3 mt-5">
+          <Badge variant="outline" className="text-xs px-3 py-1"><Sprout className="h-3 w-3 mr-1" /> 11 Crops Supported</Badge>
+          <Badge variant="outline" className="text-xs px-3 py-1"><Bug className="h-3 w-3 mr-1" /> 25+ Diseases</Badge>
+          <Badge variant="outline" className="text-xs px-3 py-1"><IndianRupee className="h-3 w-3 mr-1" /> Pesticide Costs in ₹</Badge>
+          <Badge variant="outline" className="text-xs px-3 py-1"><Mountain className="h-3 w-3 mr-1" /> Soil Analysis</Badge>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-5 gap-8 max-w-6xl mx-auto">
         {/* Upload Section */}
-        <Card className="lg:col-span-2 p-6 shadow-card border-border h-fit">
-          <h3 className="font-serif text-xl font-semibold text-foreground mb-5 flex items-center gap-2">
+        <Card className="lg:col-span-2 p-6 shadow-card border-border h-fit space-y-5">
+          <h3 className="font-serif text-xl font-semibold text-foreground flex items-center gap-2">
             <Camera className="h-5 w-5 text-primary" />
-            Upload Crop Image
+            Upload Image
           </h3>
 
           <input
@@ -361,9 +507,9 @@ const Predict = () => {
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Upload className="h-7 w-7 text-primary" />
               </div>
-              <p className="font-medium text-foreground mb-1">Click to upload</p>
+              <p className="font-medium text-foreground mb-1">Click to upload or take a photo</p>
               <p className="text-sm text-muted-foreground text-center">
-                Take a photo or upload an image of your crop leaf, plant, or field
+                Crop leaf, plant, or farmland/soil image
               </p>
               <p className="text-xs text-muted-foreground/60 mt-3">
                 JPG, PNG, WEBP • Max 10MB
@@ -384,36 +530,103 @@ const Predict = () => {
           <Button
             onClick={handleAnalyze}
             disabled={!image || loading}
-            className="w-full gradient-hero text-primary-foreground border-0 shadow-soft hover:opacity-90 transition-opacity mt-5"
+            className="w-full gradient-hero text-primary-foreground border-0 shadow-soft hover:opacity-90 transition-opacity"
           >
             {loading ? "Analyzing..." : (
               <>
                 <Sparkles className="h-4 w-4 mr-2" />
-                Analyze & Detect Diseases
+                Analyze Image
               </>
             )}
           </Button>
 
           {image && !result && !loading && (
-            <p className="text-xs text-muted-foreground text-center mt-3">
-              Click analyze to detect diseases and get pesticide recommendations
+            <p className="text-xs text-muted-foreground text-center">
+              Click analyze to detect diseases, check crop health, or analyze soil quality
             </p>
+          )}
+
+          {/* Supported Crops Quick Reference */}
+          <div className="border-t border-border pt-4">
+            <p className="text-xs font-semibold text-muted-foreground mb-2">SUPPORTED CROPS</p>
+            <div className="flex flex-wrap gap-1.5">
+              {allCropKeys.map(crop => (
+                <Badge key={crop} variant="secondary" className="text-[10px] capitalize">{crop}</Badge>
+              ))}
+            </div>
+          </div>
+
+          {/* Analysis History */}
+          {history.length > 0 && (
+            <div className="border-t border-border pt-4">
+              <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
+                <Clock className="h-3 w-3" /> RECENT ANALYSES
+              </p>
+              <div className="space-y-2">
+                {history.map((h, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { setImage(h.image); setResult(h.result); }}
+                    className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors text-left"
+                  >
+                    <img src={h.image} alt="" className="w-10 h-10 rounded object-cover" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-foreground truncate">{h.result.cropDetected}</p>
+                      <p className="text-[10px] text-muted-foreground">{h.result.healthStatus} • {h.timestamp.toLocaleTimeString()}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
         </Card>
 
         {/* Results */}
         <div className="lg:col-span-3 space-y-6">
           {loading ? (
-            <div className="flex items-center justify-center min-h-[400px] rounded-xl border border-border bg-card/50">
-              <LoadingSpinner />
-            </div>
+            <Card className="p-10 shadow-card border-border">
+              <div className="flex flex-col items-center gap-6">
+                <LoadingSpinner />
+                <div className="w-full max-w-md space-y-4">
+                  <Progress value={((analysisStep + 1) / analysisSteps.length) * 100} className="h-2" />
+                  <div className="space-y-2">
+                    {analysisSteps.map((step, i) => (
+                      <div key={i} className={`flex items-center gap-3 text-sm transition-all ${i <= analysisStep ? 'text-foreground' : 'text-muted-foreground/40'}`}>
+                        {i < analysisStep ? (
+                          <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                        ) : i === analysisStep ? (
+                          <div className="h-4 w-4 rounded-full border-2 border-primary border-t-transparent animate-spin shrink-0" />
+                        ) : (
+                          <div className="h-4 w-4 rounded-full border border-muted-foreground/30 shrink-0" />
+                        )}
+                        <span>{step.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </Card>
           ) : !result ? (
             <div className="flex flex-col items-center justify-center h-full min-h-[400px] rounded-xl border border-dashed border-border bg-card/50 p-10 text-center">
               <Leaf className="h-16 w-16 text-muted-foreground/30 mb-4" />
               <h3 className="font-serif text-xl text-muted-foreground mb-2">No Analysis Yet</h3>
-              <p className="text-muted-foreground/70 text-sm max-w-sm">
-                Upload a crop image and click "Analyze" to get disease detection results with pesticide suggestions.
+              <p className="text-muted-foreground/70 text-sm max-w-sm mb-6">
+                Upload a crop image or land photo and click "Analyze" to get AI-powered detection results.
               </p>
+              <div className="grid grid-cols-3 gap-4 max-w-md w-full">
+                <div className="p-3 rounded-lg bg-primary/5 border border-primary/15 text-center">
+                  <Sprout className="h-6 w-6 text-primary mx-auto mb-1" />
+                  <p className="text-[10px] text-muted-foreground">Healthy Crop Detection</p>
+                </div>
+                <div className="p-3 rounded-lg bg-destructive/5 border border-destructive/15 text-center">
+                  <Bug className="h-6 w-6 text-destructive mx-auto mb-1" />
+                  <p className="text-[10px] text-muted-foreground">Disease Identification</p>
+                </div>
+                <div className="p-3 rounded-lg bg-secondary/10 border border-secondary/20 text-center">
+                  <Mountain className="h-6 w-6 text-chart-earth mx-auto mb-1" />
+                  <p className="text-[10px] text-muted-foreground">Soil Quality Analysis</p>
+                </div>
+              </div>
             </div>
           ) : (
             <>
@@ -434,27 +647,40 @@ const Predict = () => {
                   </div>
                   <div className="text-right">
                     <div className="text-sm opacity-70 mb-1">Confidence</div>
-                    <div className="text-2xl font-serif font-bold">{result.overallConfidence}%</div>
+                    <div className="text-3xl font-serif font-bold">{result.overallConfidence}%</div>
+                    <div className="text-xs opacity-60 mt-1">AI Analysis Score</div>
                   </div>
                 </div>
               </Card>
 
-              {/* Soil Analysis (for land images) */}
+              {/* Soil Analysis (for land) */}
               {result.soilAnalysis && (
                 <Card className="p-6 shadow-card border-border animate-fade-up" style={{ animationDelay: "0.1s" }}>
                   <h3 className="font-serif text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
                     <Mountain className="h-5 w-5 text-primary" />
-                    Soil & Land Analysis
+                    Comprehensive Soil & Land Analysis
                   </h3>
-                  <div className="grid grid-cols-2 gap-4 mb-5">
-                    <div className="p-4 rounded-lg bg-muted/30 border border-border">
-                      <p className="text-xs text-muted-foreground mb-1">Soil Quality</p>
-                      <p className="font-bold text-foreground text-lg">{result.soilAnalysis.quality}</p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+                    <div className="p-3 rounded-lg bg-muted/30 border border-border">
+                      <p className="text-[10px] text-muted-foreground mb-1 flex items-center gap-1"><ThermometerSun className="h-3 w-3" /> Soil Quality</p>
+                      <p className="font-bold text-foreground">{result.soilAnalysis.quality}</p>
                     </div>
-                    <div className="p-4 rounded-lg bg-muted/30 border border-border">
-                      <p className="text-xs text-muted-foreground mb-1">Moisture Level</p>
-                      <p className="font-bold text-foreground text-lg">{result.soilAnalysis.moisture}</p>
+                    <div className="p-3 rounded-lg bg-muted/30 border border-border">
+                      <p className="text-[10px] text-muted-foreground mb-1 flex items-center gap-1"><Droplets className="h-3 w-3" /> Moisture</p>
+                      <p className="font-bold text-foreground text-sm">{result.soilAnalysis.moisture.split("(")[0]}</p>
                     </div>
+                    <div className="p-3 rounded-lg bg-muted/30 border border-border">
+                      <p className="text-[10px] text-muted-foreground mb-1">pH Level</p>
+                      <p className="font-bold text-foreground text-sm">{result.soilAnalysis.phLevel.split("(")[0]}</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-muted/30 border border-border">
+                      <p className="text-[10px] text-muted-foreground mb-1">Organic Matter</p>
+                      <p className="font-bold text-foreground text-sm">{result.soilAnalysis.organicMatter.split("(")[0]}</p>
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/20 border border-border mb-5">
+                    <p className="text-xs text-muted-foreground mb-1"><Wind className="h-3 w-3 inline mr-1" /> Soil Texture</p>
+                    <p className="text-sm font-medium text-foreground">{result.soilAnalysis.texture}</p>
                   </div>
                   <div className="mb-5">
                     <p className="text-sm font-semibold text-foreground mb-2">🌾 Suitable Crops for this Soil:</p>
@@ -465,7 +691,7 @@ const Predict = () => {
                     </div>
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-foreground mb-3">📋 Recommendations:</p>
+                    <p className="text-sm font-semibold text-foreground mb-3">📋 Expert Recommendations:</p>
                     <div className="space-y-3">
                       {result.soilAnalysis.recommendations.map((rec, i) => (
                         <div key={i} className="flex gap-3 items-start">
@@ -478,36 +704,52 @@ const Predict = () => {
                 </Card>
               )}
 
-              {/* Healthy Crop Message */}
+              {/* Healthy Crop */}
               {result.healthStatus === "Healthy" && result.imageType === "crop" && (
                 <Card className="p-6 shadow-card border-border animate-fade-up bg-primary/5" style={{ animationDelay: "0.1s" }}>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 mb-4">
                     <div className="w-14 h-14 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
                       <CheckCircle2 className="h-8 w-8 text-primary" />
                     </div>
                     <div>
                       <h3 className="font-serif text-lg font-semibold text-foreground">Great News! Your Crop is Healthy 🎉</h3>
                       <p className="text-sm text-muted-foreground mt-1">
-                        No disease or pest infestation detected. Your {result.cropDetected.toLowerCase()} crop appears to be in good condition. Keep up the good agricultural practices!
+                        No disease or pest infestation detected. Your <strong>{result.cropDetected.toLowerCase()}</strong> crop appears to be in excellent condition. No pesticides needed — keep following good agricultural practices!
                       </p>
                     </div>
                   </div>
+                  {result.nutrientInfo && (
+                    <div className="grid grid-cols-3 gap-3 p-4 rounded-lg bg-primary/5 border border-primary/15">
+                      <div className="text-center">
+                        <p className="text-[10px] text-muted-foreground">Nitrogen (N)</p>
+                        <p className="text-sm font-semibold text-primary">{result.nutrientInfo.nitrogen}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[10px] text-muted-foreground">Phosphorus (P)</p>
+                        <p className="text-sm font-semibold text-primary">{result.nutrientInfo.phosphorus}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[10px] text-muted-foreground">Potassium (K)</p>
+                        <p className="text-sm font-semibold text-primary">{result.nutrientInfo.potassium}</p>
+                      </div>
+                    </div>
+                  )}
                 </Card>
               )}
 
-              {/* Diseases Detected (only if diseases found) */}
+              {/* Diseases */}
               {result.diseases.length > 0 && (
                 <Card className="p-6 shadow-card border-border animate-fade-up" style={{ animationDelay: "0.1s" }}>
                   <h3 className="font-serif text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
                     <Bug className="h-5 w-5 text-destructive" />
-                    Diseases Detected
+                    Diseases Detected ({result.diseases.length})
                   </h3>
                   <div className="space-y-4">
                     {result.diseases.map((disease, i) => {
                       const sev = severityConfig[disease.severity];
                       return (
                         <div key={i} className="p-4 rounded-lg border border-border bg-muted/30">
-                          <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                             <h4 className="font-semibold text-foreground">{disease.name}</h4>
                             <div className="flex items-center gap-2">
                               <Badge variant="outline" className="text-xs">
@@ -519,7 +761,7 @@ const Predict = () => {
                               </span>
                             </div>
                           </div>
-                          <p className="text-sm text-muted-foreground">{disease.description}</p>
+                          <p className="text-sm text-muted-foreground leading-relaxed">{disease.description}</p>
                         </div>
                       );
                     })}
@@ -527,7 +769,7 @@ const Predict = () => {
                 </Card>
               )}
 
-              {/* Pesticide Suggestions (only if pesticides recommended) */}
+              {/* Pesticides */}
               {result.pesticides.length > 0 && (
                 <Card className="p-6 shadow-card border-border animate-fade-up" style={{ animationDelay: "0.2s" }}>
                   <h3 className="font-serif text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
@@ -544,10 +786,11 @@ const Predict = () => {
                           </div>
                           <div className="text-right">
                             <div className="font-bold text-primary text-lg">{pest.cost}</div>
-                            <div className="text-xs text-secondary-foreground">{renderStars(pest.rating)}</div>
+                            <div className="text-xs text-chart-gold">{renderStars(pest.rating)}</div>
                           </div>
                         </div>
-                        <div className="flex flex-wrap gap-2 mt-2">
+                        <p className="text-xs text-muted-foreground mb-2 italic">📌 {pest.applicationMethod}</p>
+                        <div className="flex flex-wrap gap-2">
                           <Badge variant="secondary" className="text-xs">{pest.type}</Badge>
                           <Badge variant="outline" className="text-xs">Dosage: {pest.dosage}</Badge>
                         </div>
@@ -557,12 +800,36 @@ const Predict = () => {
                 </Card>
               )}
 
+              {/* Nutrient Info for diseased crops */}
+              {result.nutrientInfo && result.healthStatus !== "Healthy" && result.imageType === "crop" && (
+                <Card className="p-5 shadow-card border-border animate-fade-up" style={{ animationDelay: "0.25s" }}>
+                  <h3 className="font-serif text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <Droplets className="h-4 w-4 text-primary" />
+                    Nutrient Status (Estimated)
+                  </h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="p-3 rounded-lg bg-muted/30 border border-border text-center">
+                      <p className="text-[10px] text-muted-foreground">Nitrogen (N)</p>
+                      <p className="text-xs font-semibold text-foreground">{result.nutrientInfo.nitrogen}</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-muted/30 border border-border text-center">
+                      <p className="text-[10px] text-muted-foreground">Phosphorus (P)</p>
+                      <p className="text-xs font-semibold text-foreground">{result.nutrientInfo.phosphorus}</p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-muted/30 border border-border text-center">
+                      <p className="text-[10px] text-muted-foreground">Potassium (K)</p>
+                      <p className="text-xs font-semibold text-foreground">{result.nutrientInfo.potassium}</p>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
               {/* Care Tips */}
               {result.careTips.length > 0 && (
                 <Card className="p-6 shadow-card border-border animate-fade-up" style={{ animationDelay: "0.3s" }}>
                   <h3 className="font-serif text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
                     <TrendingUp className="h-5 w-5 text-primary" />
-                    {result.healthStatus === "Healthy" ? "Maintenance Tips" : "Care & Prevention Tips"}
+                    {result.healthStatus === "Healthy" ? "Maintenance Tips to Stay Disease-Free" : "Treatment & Prevention Guide"}
                   </h3>
                   <div className="space-y-3">
                     {result.careTips.map((tip, i) => (
@@ -574,6 +841,13 @@ const Predict = () => {
                   </div>
                 </Card>
               )}
+
+              {/* Disclaimer */}
+              <div className="p-4 rounded-lg bg-muted/30 border border-border text-center animate-fade-up" style={{ animationDelay: "0.4s" }}>
+                <p className="text-xs text-muted-foreground">
+                  ⚠️ <strong>Disclaimer:</strong> This AI analysis is based on image color patterns and serves as a preliminary assessment. For accurate diagnosis, consult your local Agricultural Extension Officer or Krishi Vigyan Kendra (KVK). Always follow recommended dosages on pesticide labels.
+                </p>
+              </div>
             </>
           )}
         </div>
