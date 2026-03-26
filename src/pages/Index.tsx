@@ -211,19 +211,23 @@ const Index = () => {
             Supported <span className="text-gradient-primary">Crops</span>
           </h2>
           <p className="text-muted-foreground text-lg">
-            Disease detection and pesticide recommendations for all major Indian crops
+            Disease detection powered by Kaggle PlantVillage Dataset — 38 classes, 18 crops
           </p>
         </div>
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-11 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-9 gap-3">
           {crops.map((c, i) => (
-            <div
+            <motion.div
               key={c.name}
-              className="rounded-xl border border-border bg-card p-4 text-center shadow-soft hover:shadow-card hover:-translate-y-1 transition-all duration-300 animate-fade-up"
-              style={{ animationDelay: `${i * 0.04}s` }}
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              custom={i * 0.3}
+              className="rounded-xl border border-border bg-card p-4 text-center shadow-soft hover:shadow-card hover:-translate-y-1 transition-all duration-300"
             >
               <div className="text-2xl mb-1">{c.emoji}</div>
               <div className="text-xs font-medium text-foreground">{c.name}</div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </section>
