@@ -830,6 +830,11 @@ const Predict = () => {
                     <div className="text-sm opacity-70 mb-1">Confidence</div>
                     <div className="text-3xl font-serif font-bold">{result.overallConfidence}%</div>
                     <div className="text-xs opacity-60 mt-1">AI Analysis Score</div>
+                    {result.datasetSource && (
+                      <div className="text-[10px] opacity-50 mt-2 max-w-[180px] text-right leading-tight">
+                        📊 {result.datasetSource}
+                      </div>
+                    )}
                   </div>
                 </div>
               </Card>
