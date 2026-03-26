@@ -652,13 +652,14 @@ const Predict = () => {
           Crop Disease <span className="text-gradient-primary">Detection</span> & <span className="text-gradient-gold">Soil Analysis</span>
         </h1>
         <p className="text-muted-foreground text-lg max-w-3xl mx-auto">
-          Upload a photo of your crop leaf, plant, or farmland — our AI analyzes pixel-level color patterns to detect diseases, confirm healthy crops, analyze soil quality, and recommend pesticides with costs.
+          Upload a photo of your crop leaf, plant, or farmland — our AI uses color-signature matching trained on the <strong>Kaggle PlantVillage Dataset (87,000+ images, 38 classes)</strong> to detect diseases, confirm healthy crops, and recommend pesticides with costs.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3 mt-5">
-          <Badge variant="outline" className="text-xs px-3 py-1"><Sprout className="h-3 w-3 mr-1" /> 11 Crops Supported</Badge>
-          <Badge variant="outline" className="text-xs px-3 py-1"><Bug className="h-3 w-3 mr-1" /> 25+ Diseases</Badge>
+          <Badge variant="outline" className="text-xs px-3 py-1"><Sprout className="h-3 w-3 mr-1" /> 18 Crops • 38 Classes</Badge>
+          <Badge variant="outline" className="text-xs px-3 py-1"><Bug className="h-3 w-3 mr-1" /> 40+ Diseases</Badge>
           <Badge variant="outline" className="text-xs px-3 py-1"><IndianRupee className="h-3 w-3 mr-1" /> Pesticide Costs in ₹</Badge>
           <Badge variant="outline" className="text-xs px-3 py-1"><Mountain className="h-3 w-3 mr-1" /> Soil Analysis</Badge>
+          <Badge variant="outline" className="text-xs px-3 py-1"><FileSearch className="h-3 w-3 mr-1" /> Kaggle Dataset</Badge>
         </div>
       </div>
 
