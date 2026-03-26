@@ -133,17 +133,21 @@ const Index = () => {
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((f, i) => (
-            <div
+            <motion.div
               key={f.title}
-              className="group rounded-xl border border-border bg-card p-7 shadow-soft hover:shadow-card transition-all duration-300 hover:-translate-y-1 animate-fade-up"
-              style={{ animationDelay: `${i * 0.08}s` }}
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              custom={i}
+              className="group rounded-xl border border-border bg-card p-7 shadow-soft hover:shadow-card transition-all duration-300 hover:-translate-y-1"
             >
               <div className="gradient-hero rounded-lg p-2.5 w-fit mb-4">
                 <f.icon className="h-5 w-5 text-primary-foreground" />
               </div>
               <h3 className="font-serif text-xl font-semibold text-foreground mb-2">{f.title}</h3>
               <p className="text-muted-foreground leading-relaxed text-sm">{f.desc}</p>
-            </div>
+            </motion.div>
           ))}
         </div>
       </section>
