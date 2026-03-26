@@ -104,15 +104,19 @@ const Index = () => {
       <section className="container -mt-10 relative z-10">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {stats.map((stat, i) => (
-            <div
+            <motion.div
               key={stat.label}
-              className="gradient-card rounded-xl p-5 shadow-card border border-border/50 text-center animate-fade-up"
-              style={{ animationDelay: `${i * 0.1}s` }}
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              custom={i}
+              className="gradient-card rounded-xl p-5 shadow-card border border-border/50 text-center"
             >
               <stat.icon className="h-6 w-6 text-primary mx-auto mb-2" />
               <div className="text-2xl md:text-3xl font-serif font-bold text-foreground">{stat.value}</div>
               <div className="text-sm text-muted-foreground mt-1">{stat.label}</div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </section>
