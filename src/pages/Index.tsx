@@ -192,11 +192,11 @@ const Index = () => {
                 className="rounded-2xl shadow-elevated w-full object-cover aspect-square"
               />
               <div className="absolute -bottom-4 -left-4 gradient-gold rounded-xl p-4 shadow-card">
-                <div className="text-secondary-foreground font-serif font-bold text-2xl">94%</div>
+                <div className="text-secondary-foreground font-serif font-bold text-2xl">95%</div>
                 <div className="text-secondary-foreground/80 text-sm">Detection Accuracy</div>
               </div>
               <div className="absolute -top-3 -right-3 gradient-hero rounded-xl p-3 shadow-card">
-                <div className="text-primary-foreground font-serif font-bold text-lg">11</div>
+                <div className="text-primary-foreground font-serif font-bold text-lg">18</div>
                 <div className="text-primary-foreground/80 text-xs">Crops</div>
               </div>
             </div>
