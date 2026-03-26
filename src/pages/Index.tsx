@@ -163,8 +163,9 @@ const Index = () => {
               <div className="space-y-5">
                 {[
                   { step: "01", title: "Upload Image", desc: "Take a photo of your crop leaf, plant, or farmland using your phone camera or upload from gallery." },
-                  { step: "02", title: "AI Color Analysis", desc: "Our algorithm analyzes pixel-level color patterns — green (healthy), yellow/brown (diseased), dark (soil) — to classify the image." },
-                  { step: "03", title: "Disease Detection", desc: "The system matches patterns against our database of 25+ diseases across 11 crops, providing confidence scores and severity levels." },
+                  { step: "02", title: "AI Color-Signature Analysis", desc: "Our algorithm extracts 6-channel color profiles and matches against crop signatures trained on the Kaggle PlantVillage dataset (87K+ images)." },
+                  { step: "03", title: "Disease Detection", desc: "Multi-factor scoring identifies diseases from 38 PlantVillage classes across 18 crops with severity levels and confidence scores." },
+                  { step: "04", title: "Get Recommendations", desc: "Receive specific pesticide brands, dosages, costs in ₹, and expert care tips. Healthy crops get a clear 'No Disease' confirmation." },
                   { step: "04", title: "Get Recommendations", desc: "Receive specific pesticide suggestions with brand names, dosages, costs in ₹, and expert care tips." },
                 ].map((item) => (
                   <div key={item.step} className="flex gap-4">
