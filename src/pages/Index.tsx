@@ -306,12 +306,12 @@ const Index = () => {
             </div>
             <div className="rounded-xl border border-border bg-card p-6 text-center shadow-soft">
               <Bug className="h-8 w-8 text-destructive mx-auto mb-2" />
-              <p className="font-serif font-bold text-2xl text-foreground">25+</p>
+              <p className="font-serif font-bold text-2xl text-foreground">40+</p>
               <p className="text-xs text-muted-foreground">Diseases</p>
             </div>
             <div className="rounded-xl border border-border bg-card p-6 text-center shadow-soft">
               <Leaf className="h-8 w-8 text-primary mx-auto mb-2" />
-              <p className="font-serif font-bold text-2xl text-foreground">11</p>
+              <p className="font-serif font-bold text-2xl text-foreground">18</p>
               <p className="text-xs text-muted-foreground">Crops</p>
             </div>
             <div className="rounded-xl border border-border bg-card p-6 text-center shadow-soft">
