@@ -279,7 +279,12 @@ const Index = () => {
             <div className="space-y-4">
               {[
                 "No app installation needed — works directly in your browser",
-                "Supports 11 Indian crops with 25+ disease patterns",
+                "18 crops with 40+ diseases from Kaggle PlantVillage Dataset (87K images)",
+                "Pesticide costs in Indian Rupees (₹) from trusted brands like Syngenta, Bayer, BASF",
+                "Soil quality, pH, moisture & texture analysis from farmland photos",
+                "Confirms healthy crops — clear 'No Disease Detected' when crop is fine",
+                "Covers PlantVillage classes: Apple Scab, Corn Rust, Tomato Blight & more",
+                "100% free to use for Indian farmers",
                 "Pesticide costs in Indian Rupees (₹) from trusted brands",
                 "Soil quality analysis from farmland photos",
                 "Confirms healthy crops — says clearly if no disease found",
