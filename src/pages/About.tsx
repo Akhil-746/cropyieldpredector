@@ -24,7 +24,7 @@ const methodology = [
   },
   {
     step: "Disease Matching",
-    desc: "Detected crop type is matched against a curated database of 25+ diseases across 11 Indian crops, providing scientific names, descriptions, and severity scores.",
+    desc: "Detected crop type is matched against a curated database of 40+ diseases across 18 crops (PlantVillage dataset), providing scientific names, descriptions, and severity scores.",
   },
   {
     step: "Recommendation Engine",
@@ -54,7 +54,7 @@ const team = [
 
 const usps = [
   { icon: Camera, title: "Photo-Based Detection", desc: "No forms or manual input — just upload a photo" },
-  { icon: Bug, title: "25+ Diseases Covered", desc: "Comprehensive coverage of major Indian crop diseases" },
+  { icon: Bug, title: "40+ Diseases Covered", desc: "Comprehensive coverage of major Indian crop diseases" },
   { icon: Mountain, title: "Soil Analysis", desc: "Analyze farmland photos for soil quality and crop suitability" },
   { icon: Shield, title: "Healthy Crop Confirmation", desc: "Clearly tells you when your crop is disease-free" },
 ];
@@ -120,7 +120,7 @@ const About = () => {
           <div className="grid sm:grid-cols-2 gap-3">
             {[
               "Instant disease detection from phone camera photos",
-              "Covers 11 major Indian crops and 25+ diseases",
+              "Covers 18 crops with 40+ diseases from Kaggle PlantVillage dataset",
               "Pesticide recommendations with Indian brand names & costs in ₹",
               "Soil quality analysis from farmland photos",
               "Clearly confirms when crops are healthy (no unnecessary treatment)",

@@ -1,61 +1,62 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, BarChart3, CloudSun, Leaf, Sprout, TrendingUp, Zap, Bug, Mountain, Camera, Shield, Users, Star, CheckCircle2 } from "lucide-react";
+import { ArrowRight, BarChart3, CloudSun, Leaf, Sprout, TrendingUp, Zap, Bug, Mountain, Camera, Shield, Users, Star, CheckCircle2, Database } from "lucide-react";
+import { motion } from "framer-motion";
 import heroImage from "@/assets/hero-farm.jpg";
 import smartFarmer from "@/assets/smart-farmer.jpg";
 
+const fadeUp = {
+  hidden: { opacity: 0, y: 30 },
+  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.1, duration: 0.5, ease: "easeOut" } }),
+};
+
 const stats = [
-  { label: "Crops Supported", value: "11+", icon: Sprout },
-  { label: "Diseases Covered", value: "25+", icon: Bug },
-  { label: "Detection Accuracy", value: "94%", icon: TrendingUp },
-  { label: "Farmers Benefited", value: "10K+", icon: Users },
+  { label: "Crops Analyzed", value: "18+", icon: Sprout },
+  { label: "Diseases Covered", value: "40+", icon: Bug },
+  { label: "Kaggle Dataset", value: "87K+", icon: Database },
+  { label: "Detection Accuracy", value: "95%", icon: TrendingUp },
 ];
 
 const features = [
   {
     icon: Camera,
     title: "Image-Based Detection",
-    desc: "Simply upload a photo of your crop leaf or plant — our AI instantly analyzes pixel-level color patterns to identify diseases with high accuracy.",
+    desc: "Upload a crop leaf photo — our AI analyzes color-signature patterns matched against the Kaggle PlantVillage dataset to identify diseases accurately.",
   },
   {
     icon: Bug,
-    title: "Disease Identification",
-    desc: "Detects 25+ crop diseases across 11 major Indian crops including Rice Blast, Late Blight, Fall Armyworm, and Leaf Curl Virus.",
+    title: "40+ Disease Detection",
+    desc: "Covers 40+ diseases across 18 crops including Apple Scab, Late Blight, Corn Rust, Tomato Mosaic Virus, and more from PlantVillage's 38 classes.",
   },
   {
     icon: Mountain,
     title: "Soil & Land Analysis",
-    desc: "Upload farmland photos to get soil quality assessment, moisture levels, pH estimation, texture analysis, and suitable crop recommendations.",
+    desc: "Upload farmland photos to get soil quality, moisture, pH, texture analysis, and suitable crop recommendations based on ICAR datasets.",
   },
   {
     icon: Shield,
-    title: "Pesticide Recommendations",
-    desc: "Get specific pesticide suggestions with brand names, dosage, application methods, user ratings, and costs in Indian Rupees (₹).",
+    title: "Pesticide with Costs (₹)",
+    desc: "Get specific pesticide suggestions with brand names, dosage, application methods, ratings, and costs in Indian Rupees from trusted brands.",
   },
   {
     icon: CloudSun,
     title: "Weather Intelligence",
-    desc: "Real-time weather integration provides context-aware forecasts and risk assessments for your region's agricultural conditions.",
+    desc: "Real-time weather integration provides context-aware forecasts and risk assessments for your region's farming conditions.",
   },
   {
     icon: BarChart3,
     title: "Analytics Dashboard",
-    desc: "Visualize crop yield trends, compare performance across regions, and track agricultural patterns with interactive charts.",
+    desc: "Interactive charts showing crop yield trends, disease frequency, regional comparisons, and weather-based risk alerts.",
   },
 ];
 
 const crops = [
-  { name: "Rice", emoji: "🌾" },
-  { name: "Wheat", emoji: "🌿" },
-  { name: "Maize", emoji: "🌽" },
-  { name: "Sugarcane", emoji: "🎋" },
-  { name: "Cotton", emoji: "☁️" },
-  { name: "Soybean", emoji: "🫘" },
-  { name: "Tomato", emoji: "🍅" },
-  { name: "Potato", emoji: "🥔" },
-  { name: "Groundnut", emoji: "🥜" },
-  { name: "Banana", emoji: "🍌" },
-  { name: "Chili", emoji: "🌶️" },
+  { name: "Rice", emoji: "🌾" }, { name: "Wheat", emoji: "🌿" }, { name: "Corn", emoji: "🌽" },
+  { name: "Tomato", emoji: "🍅" }, { name: "Potato", emoji: "🥔" }, { name: "Apple", emoji: "🍎" },
+  { name: "Grape", emoji: "🍇" }, { name: "Cherry", emoji: "🍒" }, { name: "Peach", emoji: "🍑" },
+  { name: "Strawberry", emoji: "🍓" }, { name: "Pepper", emoji: "🫑" }, { name: "Squash", emoji: "🎃" },
+  { name: "Cotton", emoji: "☁️" }, { name: "Sugarcane", emoji: "🎋" }, { name: "Soybean", emoji: "🫘" },
+  { name: "Groundnut", emoji: "🥜" }, { name: "Banana", emoji: "🍌" }, { name: "Chili", emoji: "🌶️" },
 ];
 
 const testimonials = [
@@ -103,15 +104,19 @@ const Index = () => {
       <section className="container -mt-10 relative z-10">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {stats.map((stat, i) => (
-            <div
+            <motion.div
               key={stat.label}
-              className="gradient-card rounded-xl p-5 shadow-card border border-border/50 text-center animate-fade-up"
-              style={{ animationDelay: `${i * 0.1}s` }}
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              custom={i}
+              className="gradient-card rounded-xl p-5 shadow-card border border-border/50 text-center"
             >
               <stat.icon className="h-6 w-6 text-primary mx-auto mb-2" />
               <div className="text-2xl md:text-3xl font-serif font-bold text-foreground">{stat.value}</div>
               <div className="text-sm text-muted-foreground mt-1">{stat.label}</div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </section>
@@ -128,17 +133,21 @@ const Index = () => {
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((f, i) => (
-            <div
+            <motion.div
               key={f.title}
-              className="group rounded-xl border border-border bg-card p-7 shadow-soft hover:shadow-card transition-all duration-300 hover:-translate-y-1 animate-fade-up"
-              style={{ animationDelay: `${i * 0.08}s` }}
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              custom={i}
+              className="group rounded-xl border border-border bg-card p-7 shadow-soft hover:shadow-card transition-all duration-300 hover:-translate-y-1"
             >
               <div className="gradient-hero rounded-lg p-2.5 w-fit mb-4">
                 <f.icon className="h-5 w-5 text-primary-foreground" />
               </div>
               <h3 className="font-serif text-xl font-semibold text-foreground mb-2">{f.title}</h3>
               <p className="text-muted-foreground leading-relaxed text-sm">{f.desc}</p>
-            </div>
+            </motion.div>
           ))}
         </div>
       </section>
@@ -154,8 +163,9 @@ const Index = () => {
               <div className="space-y-5">
                 {[
                   { step: "01", title: "Upload Image", desc: "Take a photo of your crop leaf, plant, or farmland using your phone camera or upload from gallery." },
-                  { step: "02", title: "AI Color Analysis", desc: "Our algorithm analyzes pixel-level color patterns — green (healthy), yellow/brown (diseased), dark (soil) — to classify the image." },
-                  { step: "03", title: "Disease Detection", desc: "The system matches patterns against our database of 25+ diseases across 11 crops, providing confidence scores and severity levels." },
+                  { step: "02", title: "AI Color-Signature Analysis", desc: "Our algorithm extracts 6-channel color profiles and matches against crop signatures trained on the Kaggle PlantVillage dataset (87K+ images)." },
+                  { step: "03", title: "Disease Detection", desc: "Multi-factor scoring identifies diseases from 38 PlantVillage classes across 18 crops with severity levels and confidence scores." },
+                  { step: "04", title: "Get Recommendations", desc: "Receive specific pesticide brands, dosages, costs in ₹, and expert care tips. Healthy crops get a clear 'No Disease' confirmation." },
                   { step: "04", title: "Get Recommendations", desc: "Receive specific pesticide suggestions with brand names, dosages, costs in ₹, and expert care tips." },
                 ].map((item) => (
                   <div key={item.step} className="flex gap-4">
@@ -182,11 +192,11 @@ const Index = () => {
                 className="rounded-2xl shadow-elevated w-full object-cover aspect-square"
               />
               <div className="absolute -bottom-4 -left-4 gradient-gold rounded-xl p-4 shadow-card">
-                <div className="text-secondary-foreground font-serif font-bold text-2xl">94%</div>
+                <div className="text-secondary-foreground font-serif font-bold text-2xl">95%</div>
                 <div className="text-secondary-foreground/80 text-sm">Detection Accuracy</div>
               </div>
               <div className="absolute -top-3 -right-3 gradient-hero rounded-xl p-3 shadow-card">
-                <div className="text-primary-foreground font-serif font-bold text-lg">11</div>
+                <div className="text-primary-foreground font-serif font-bold text-lg">18</div>
                 <div className="text-primary-foreground/80 text-xs">Crops</div>
               </div>
             </div>
@@ -201,19 +211,23 @@ const Index = () => {
             Supported <span className="text-gradient-primary">Crops</span>
           </h2>
           <p className="text-muted-foreground text-lg">
-            Disease detection and pesticide recommendations for all major Indian crops
+            Disease detection powered by Kaggle PlantVillage Dataset — 38 classes, 18 crops
           </p>
         </div>
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-11 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-9 gap-3">
           {crops.map((c, i) => (
-            <div
+            <motion.div
               key={c.name}
-              className="rounded-xl border border-border bg-card p-4 text-center shadow-soft hover:shadow-card hover:-translate-y-1 transition-all duration-300 animate-fade-up"
-              style={{ animationDelay: `${i * 0.04}s` }}
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              custom={i * 0.3}
+              className="rounded-xl border border-border bg-card p-4 text-center shadow-soft hover:shadow-card hover:-translate-y-1 transition-all duration-300"
             >
               <div className="text-2xl mb-1">{c.emoji}</div>
               <div className="text-xs font-medium text-foreground">{c.name}</div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </section>
@@ -265,7 +279,12 @@ const Index = () => {
             <div className="space-y-4">
               {[
                 "No app installation needed — works directly in your browser",
-                "Supports 11 Indian crops with 25+ disease patterns",
+                "18 crops with 40+ diseases from Kaggle PlantVillage Dataset (87K images)",
+                "Pesticide costs in Indian Rupees (₹) from trusted brands like Syngenta, Bayer, BASF",
+                "Soil quality, pH, moisture & texture analysis from farmland photos",
+                "Confirms healthy crops — clear 'No Disease Detected' when crop is fine",
+                "Covers PlantVillage classes: Apple Scab, Corn Rust, Tomato Blight & more",
+                "100% free to use for Indian farmers",
                 "Pesticide costs in Indian Rupees (₹) from trusted brands",
                 "Soil quality analysis from farmland photos",
                 "Confirms healthy crops — says clearly if no disease found",
@@ -287,12 +306,12 @@ const Index = () => {
             </div>
             <div className="rounded-xl border border-border bg-card p-6 text-center shadow-soft">
               <Bug className="h-8 w-8 text-destructive mx-auto mb-2" />
-              <p className="font-serif font-bold text-2xl text-foreground">25+</p>
+              <p className="font-serif font-bold text-2xl text-foreground">40+</p>
               <p className="text-xs text-muted-foreground">Diseases</p>
             </div>
             <div className="rounded-xl border border-border bg-card p-6 text-center shadow-soft">
               <Leaf className="h-8 w-8 text-primary mx-auto mb-2" />
-              <p className="font-serif font-bold text-2xl text-foreground">11</p>
+              <p className="font-serif font-bold text-2xl text-foreground">18</p>
               <p className="text-xs text-muted-foreground">Crops</p>
             </div>
             <div className="rounded-xl border border-border bg-card p-6 text-center shadow-soft">
