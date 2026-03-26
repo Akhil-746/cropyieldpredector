@@ -1,61 +1,62 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, BarChart3, CloudSun, Leaf, Sprout, TrendingUp, Zap, Bug, Mountain, Camera, Shield, Users, Star, CheckCircle2 } from "lucide-react";
+import { ArrowRight, BarChart3, CloudSun, Leaf, Sprout, TrendingUp, Zap, Bug, Mountain, Camera, Shield, Users, Star, CheckCircle2, Database } from "lucide-react";
+import { motion } from "framer-motion";
 import heroImage from "@/assets/hero-farm.jpg";
 import smartFarmer from "@/assets/smart-farmer.jpg";
 
+const fadeUp = {
+  hidden: { opacity: 0, y: 30 },
+  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.1, duration: 0.5, ease: "easeOut" } }),
+};
+
 const stats = [
-  { label: "Crops Supported", value: "11+", icon: Sprout },
-  { label: "Diseases Covered", value: "25+", icon: Bug },
-  { label: "Detection Accuracy", value: "94%", icon: TrendingUp },
-  { label: "Farmers Benefited", value: "10K+", icon: Users },
+  { label: "Crops Analyzed", value: "18+", icon: Sprout },
+  { label: "Diseases Covered", value: "40+", icon: Bug },
+  { label: "Kaggle Dataset", value: "87K+", icon: Database },
+  { label: "Detection Accuracy", value: "95%", icon: TrendingUp },
 ];
 
 const features = [
   {
     icon: Camera,
     title: "Image-Based Detection",
-    desc: "Simply upload a photo of your crop leaf or plant — our AI instantly analyzes pixel-level color patterns to identify diseases with high accuracy.",
+    desc: "Upload a crop leaf photo — our AI analyzes color-signature patterns matched against the Kaggle PlantVillage dataset to identify diseases accurately.",
   },
   {
     icon: Bug,
-    title: "Disease Identification",
-    desc: "Detects 25+ crop diseases across 11 major Indian crops including Rice Blast, Late Blight, Fall Armyworm, and Leaf Curl Virus.",
+    title: "40+ Disease Detection",
+    desc: "Covers 40+ diseases across 18 crops including Apple Scab, Late Blight, Corn Rust, Tomato Mosaic Virus, and more from PlantVillage's 38 classes.",
   },
   {
     icon: Mountain,
     title: "Soil & Land Analysis",
-    desc: "Upload farmland photos to get soil quality assessment, moisture levels, pH estimation, texture analysis, and suitable crop recommendations.",
+    desc: "Upload farmland photos to get soil quality, moisture, pH, texture analysis, and suitable crop recommendations based on ICAR datasets.",
   },
   {
     icon: Shield,
-    title: "Pesticide Recommendations",
-    desc: "Get specific pesticide suggestions with brand names, dosage, application methods, user ratings, and costs in Indian Rupees (₹).",
+    title: "Pesticide with Costs (₹)",
+    desc: "Get specific pesticide suggestions with brand names, dosage, application methods, ratings, and costs in Indian Rupees from trusted brands.",
   },
   {
     icon: CloudSun,
     title: "Weather Intelligence",
-    desc: "Real-time weather integration provides context-aware forecasts and risk assessments for your region's agricultural conditions.",
+    desc: "Real-time weather integration provides context-aware forecasts and risk assessments for your region's farming conditions.",
   },
   {
     icon: BarChart3,
     title: "Analytics Dashboard",
-    desc: "Visualize crop yield trends, compare performance across regions, and track agricultural patterns with interactive charts.",
+    desc: "Interactive charts showing crop yield trends, disease frequency, regional comparisons, and weather-based risk alerts.",
   },
 ];
 
 const crops = [
-  { name: "Rice", emoji: "🌾" },
-  { name: "Wheat", emoji: "🌿" },
-  { name: "Maize", emoji: "🌽" },
-  { name: "Sugarcane", emoji: "🎋" },
-  { name: "Cotton", emoji: "☁️" },
-  { name: "Soybean", emoji: "🫘" },
-  { name: "Tomato", emoji: "🍅" },
-  { name: "Potato", emoji: "🥔" },
-  { name: "Groundnut", emoji: "🥜" },
-  { name: "Banana", emoji: "🍌" },
-  { name: "Chili", emoji: "🌶️" },
+  { name: "Rice", emoji: "🌾" }, { name: "Wheat", emoji: "🌿" }, { name: "Corn", emoji: "🌽" },
+  { name: "Tomato", emoji: "🍅" }, { name: "Potato", emoji: "🥔" }, { name: "Apple", emoji: "🍎" },
+  { name: "Grape", emoji: "🍇" }, { name: "Cherry", emoji: "🍒" }, { name: "Peach", emoji: "🍑" },
+  { name: "Strawberry", emoji: "🍓" }, { name: "Pepper", emoji: "🫑" }, { name: "Squash", emoji: "🎃" },
+  { name: "Cotton", emoji: "☁️" }, { name: "Sugarcane", emoji: "🎋" }, { name: "Soybean", emoji: "🫘" },
+  { name: "Groundnut", emoji: "🥜" }, { name: "Banana", emoji: "🍌" }, { name: "Chili", emoji: "🌶️" },
 ];
 
 const testimonials = [
