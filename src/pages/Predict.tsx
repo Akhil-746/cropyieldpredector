@@ -587,10 +587,19 @@ const healthConfig: Record<string, { bg: string; label: string; icon: any }> = {
 
 const analysisSteps = [
   { label: "Preprocessing image...", icon: FileSearch },
-  { label: "Analyzing color patterns...", icon: Microscope },
-  { label: "Detecting vegetation vs soil...", icon: Leaf },
-  { label: "Identifying diseases...", icon: Bug },
-  { label: "Generating recommendations...", icon: Sparkles },
+  { label: "Extracting color features...", icon: Microscope },
+  { label: "Matching against PlantVillage dataset...", icon: Leaf },
+  { label: "Identifying diseases (38 classes)...", icon: Bug },
+  { label: "Generating treatment plan...", icon: Sparkles },
+];
+
+const sampleImages = [
+  { src: "/samples/healthy-tomato-leaf.jpg", label: "Healthy Tomato", expected: "Healthy", type: "crop" },
+  { src: "/samples/diseased-tomato-leaf.jpg", label: "Diseased Tomato", expected: "Disease", type: "disease" },
+  { src: "/samples/healthy-rice-crop.jpg", label: "Healthy Rice", expected: "Healthy", type: "crop" },
+  { src: "/samples/diseased-rice-leaf.jpg", label: "Rice Brown Spot", expected: "Disease", type: "disease" },
+  { src: "/samples/diseased-potato-leaf.jpg", label: "Potato Blight", expected: "Disease", type: "disease" },
+  { src: "/samples/farmland-soil.jpg", label: "Farmland Soil", expected: "Soil Analysis", type: "land" },
 ];
 
 const Predict = () => {
@@ -599,6 +608,7 @@ const Predict = () => {
   const [loading, setLoading] = useState(false);
   const [analysisStep, setAnalysisStep] = useState(0);
   const [history, setHistory] = useState<Array<{ image: string; result: PredictionResult; timestamp: Date }>>([]);
+  const [showSamples, setShowSamples] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
