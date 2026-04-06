@@ -1,10 +1,12 @@
 import { useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Upload, Camera, X, Leaf, CheckCircle2, TrendingUp, AlertTriangle, ShieldCheck, Bug, IndianRupee, Sparkles, Sprout, Mountain, Droplets, ThermometerSun, Wind, Clock, FileSearch, Microscope } from "lucide-react";
+import { Upload, Camera, X, Leaf, CheckCircle2, TrendingUp, AlertTriangle, ShieldCheck, Bug, IndianRupee, Sparkles, Sprout, Mountain, Droplets, ThermometerSun, Wind, Clock, FileSearch, Microscope, Download, Share2, ImageIcon, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import PageTransition from "@/components/PageTransition";
 
 interface Disease {
   name: string;
@@ -585,10 +587,19 @@ const healthConfig: Record<string, { bg: string; label: string; icon: any }> = {
 
 const analysisSteps = [
   { label: "Preprocessing image...", icon: FileSearch },
-  { label: "Analyzing color patterns...", icon: Microscope },
-  { label: "Detecting vegetation vs soil...", icon: Leaf },
-  { label: "Identifying diseases...", icon: Bug },
-  { label: "Generating recommendations...", icon: Sparkles },
+  { label: "Extracting color features...", icon: Microscope },
+  { label: "Matching against PlantVillage dataset...", icon: Leaf },
+  { label: "Identifying diseases (38 classes)...", icon: Bug },
+  { label: "Generating treatment plan...", icon: Sparkles },
+];
+
+const sampleImages = [
+  { src: "/samples/healthy-tomato-leaf.jpg", label: "Healthy Tomato", expected: "Healthy", type: "crop" },
+  { src: "/samples/diseased-tomato-leaf.jpg", label: "Diseased Tomato", expected: "Disease", type: "disease" },
+  { src: "/samples/healthy-rice-crop.jpg", label: "Healthy Rice", expected: "Healthy", type: "crop" },
+  { src: "/samples/diseased-rice-leaf.jpg", label: "Rice Brown Spot", expected: "Disease", type: "disease" },
+  { src: "/samples/diseased-potato-leaf.jpg", label: "Potato Blight", expected: "Disease", type: "disease" },
+  { src: "/samples/farmland-soil.jpg", label: "Farmland Soil", expected: "Soil Analysis", type: "land" },
 ];
 
 const Predict = () => {
@@ -597,6 +608,7 @@ const Predict = () => {
   const [loading, setLoading] = useState(false);
   const [analysisStep, setAnalysisStep] = useState(0);
   const [history, setHistory] = useState<Array<{ image: string; result: PredictionResult; timestamp: Date }>>([]);
+  const [showSamples, setShowSamples] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -610,8 +622,27 @@ const Predict = () => {
     reader.onloadend = () => {
       setImage(reader.result as string);
       setResult(null);
+      setShowSamples(false);
     };
     reader.readAsDataURL(file);
+  };
+
+  const loadSampleImage = async (src: string) => {
+    try {
+      const response = await fetch(src);
+      const blob = await response.blob();
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImage(reader.result as string);
+        setResult(null);
+        setShowSamples(false);
+      };
+      reader.readAsDataURL(blob);
+    } catch {
+      setImage(src);
+      setResult(null);
+      setShowSamples(false);
+    }
   };
 
   const handleAnalyze = async () => {
@@ -620,10 +651,9 @@ const Predict = () => {
     setResult(null);
     setAnalysisStep(0);
 
-    // Simulate step-by-step analysis
     for (let i = 0; i < analysisSteps.length; i++) {
       setAnalysisStep(i);
-      await new Promise(r => setTimeout(r, 600));
+      await new Promise(r => setTimeout(r, 700 + Math.random() * 300));
     }
 
     const prediction = await simulateImageAnalysis(image);
@@ -635,6 +665,7 @@ const Predict = () => {
   const clearImage = () => {
     setImage(null);
     setResult(null);
+    setShowSamples(true);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -643,25 +674,77 @@ const Predict = () => {
   };
 
   return (
+    <PageTransition>
     <div className="container py-10 md:py-16">
-      <div className="text-center mb-10">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="text-center mb-10"
+      >
         <div className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-1.5 text-sm text-accent-foreground mb-4">
-          <Microscope className="h-4 w-4" /> AI-Powered Analysis
+          <Zap className="h-4 w-4" /> Real-Time AI Analysis
         </div>
         <h1 className="text-3xl md:text-5xl font-serif font-bold text-foreground mb-3">
           Crop Disease <span className="text-gradient-primary">Detection</span> & <span className="text-gradient-gold">Soil Analysis</span>
         </h1>
         <p className="text-muted-foreground text-lg max-w-3xl mx-auto">
-          Upload a photo of your crop leaf, plant, or farmland — our AI uses color-signature matching trained on the <strong>Kaggle PlantVillage Dataset (87,000+ images, 38 classes)</strong> to detect diseases, confirm healthy crops, and recommend pesticides with costs.
+          Upload a crop leaf, plant, or farmland photo — our AI analyzes it against the <strong>Kaggle PlantVillage Dataset (87K+ images, 38 classes)</strong> to detect diseases and recommend treatments.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3 mt-5">
-          <Badge variant="outline" className="text-xs px-3 py-1"><Sprout className="h-3 w-3 mr-1" /> 18 Crops • 38 Classes</Badge>
+          <Badge variant="outline" className="text-xs px-3 py-1"><Sprout className="h-3 w-3 mr-1" /> 18 Crops</Badge>
           <Badge variant="outline" className="text-xs px-3 py-1"><Bug className="h-3 w-3 mr-1" /> 40+ Diseases</Badge>
-          <Badge variant="outline" className="text-xs px-3 py-1"><IndianRupee className="h-3 w-3 mr-1" /> Pesticide Costs in ₹</Badge>
+          <Badge variant="outline" className="text-xs px-3 py-1"><IndianRupee className="h-3 w-3 mr-1" /> Costs in ₹</Badge>
           <Badge variant="outline" className="text-xs px-3 py-1"><Mountain className="h-3 w-3 mr-1" /> Soil Analysis</Badge>
-          <Badge variant="outline" className="text-xs px-3 py-1"><FileSearch className="h-3 w-3 mr-1" /> Kaggle Dataset</Badge>
         </div>
-      </div>
+      </motion.div>
+
+      {/* Sample Images Gallery */}
+      <AnimatePresence>
+        {showSamples && !image && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="max-w-5xl mx-auto mb-10"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-serif text-lg font-semibold text-foreground flex items-center gap-2">
+                <ImageIcon className="h-5 w-5 text-primary" />
+                Try with Sample Images
+              </h3>
+              <p className="text-xs text-muted-foreground">Click any image to load it for analysis</p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              {sampleImages.map((sample, i) => (
+                <motion.button
+                  key={i}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.08 }}
+                  onClick={() => loadSampleImage(sample.src)}
+                  className="group relative rounded-xl overflow-hidden border-2 border-border hover:border-primary transition-all hover:shadow-elevated aspect-square"
+                >
+                  <img src={sample.src} alt={sample.label} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" loading="lazy" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-2">
+                    <p className="text-white text-xs font-semibold truncate">{sample.label}</p>
+                    <Badge
+                      className={`text-[9px] mt-1 ${
+                        sample.type === "crop" ? "bg-primary/80 text-primary-foreground" :
+                        sample.type === "disease" ? "bg-destructive/80 text-destructive-foreground" :
+                        "bg-amber-600/80 text-white"
+                      }`}
+                    >
+                      {sample.expected}
+                    </Badge>
+                  </div>
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="grid lg:grid-cols-5 gap-8 max-w-6xl mx-auto">
         {/* Upload Section */}
@@ -812,7 +895,8 @@ const Predict = () => {
           ) : (
             <>
               {/* Detection Summary */}
-              <Card className={`p-7 shadow-elevated border-0 animate-scale-in ${result.imageType === "land" ? "bg-gradient-to-br from-amber-800 to-amber-950 text-white" : "gradient-hero text-primary-foreground"}`}>
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+              <Card className={`p-7 shadow-elevated border-0 ${result.imageType === "land" ? "bg-gradient-to-br from-amber-800 to-amber-950 text-white" : "gradient-hero text-primary-foreground"}`}>
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="opacity-70 text-sm mb-1">{result.imageType === "land" ? "Image Type" : "Crop Detected"}</p>
@@ -838,6 +922,7 @@ const Predict = () => {
                   </div>
                 </div>
               </Card>
+              </motion.div>
 
               {/* Soil Analysis (for land) */}
               {result.soilAnalysis && (
@@ -1039,6 +1124,7 @@ const Predict = () => {
         </div>
       </div>
     </div>
+    </PageTransition>
   );
 };
 
