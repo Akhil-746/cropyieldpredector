@@ -674,25 +674,77 @@ const Predict = () => {
   };
 
   return (
+    <PageTransition>
     <div className="container py-10 md:py-16">
-      <div className="text-center mb-10">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="text-center mb-10"
+      >
         <div className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-1.5 text-sm text-accent-foreground mb-4">
-          <Microscope className="h-4 w-4" /> AI-Powered Analysis
+          <Zap className="h-4 w-4" /> Real-Time AI Analysis
         </div>
         <h1 className="text-3xl md:text-5xl font-serif font-bold text-foreground mb-3">
           Crop Disease <span className="text-gradient-primary">Detection</span> & <span className="text-gradient-gold">Soil Analysis</span>
         </h1>
         <p className="text-muted-foreground text-lg max-w-3xl mx-auto">
-          Upload a photo of your crop leaf, plant, or farmland — our AI uses color-signature matching trained on the <strong>Kaggle PlantVillage Dataset (87,000+ images, 38 classes)</strong> to detect diseases, confirm healthy crops, and recommend pesticides with costs.
+          Upload a crop leaf, plant, or farmland photo — our AI analyzes it against the <strong>Kaggle PlantVillage Dataset (87K+ images, 38 classes)</strong> to detect diseases and recommend treatments.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3 mt-5">
-          <Badge variant="outline" className="text-xs px-3 py-1"><Sprout className="h-3 w-3 mr-1" /> 18 Crops • 38 Classes</Badge>
+          <Badge variant="outline" className="text-xs px-3 py-1"><Sprout className="h-3 w-3 mr-1" /> 18 Crops</Badge>
           <Badge variant="outline" className="text-xs px-3 py-1"><Bug className="h-3 w-3 mr-1" /> 40+ Diseases</Badge>
-          <Badge variant="outline" className="text-xs px-3 py-1"><IndianRupee className="h-3 w-3 mr-1" /> Pesticide Costs in ₹</Badge>
+          <Badge variant="outline" className="text-xs px-3 py-1"><IndianRupee className="h-3 w-3 mr-1" /> Costs in ₹</Badge>
           <Badge variant="outline" className="text-xs px-3 py-1"><Mountain className="h-3 w-3 mr-1" /> Soil Analysis</Badge>
-          <Badge variant="outline" className="text-xs px-3 py-1"><FileSearch className="h-3 w-3 mr-1" /> Kaggle Dataset</Badge>
         </div>
-      </div>
+      </motion.div>
+
+      {/* Sample Images Gallery */}
+      <AnimatePresence>
+        {showSamples && !image && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="max-w-5xl mx-auto mb-10"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-serif text-lg font-semibold text-foreground flex items-center gap-2">
+                <ImageIcon className="h-5 w-5 text-primary" />
+                Try with Sample Images
+              </h3>
+              <p className="text-xs text-muted-foreground">Click any image to load it for analysis</p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              {sampleImages.map((sample, i) => (
+                <motion.button
+                  key={i}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.08 }}
+                  onClick={() => loadSampleImage(sample.src)}
+                  className="group relative rounded-xl overflow-hidden border-2 border-border hover:border-primary transition-all hover:shadow-elevated aspect-square"
+                >
+                  <img src={sample.src} alt={sample.label} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" loading="lazy" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-2">
+                    <p className="text-white text-xs font-semibold truncate">{sample.label}</p>
+                    <Badge
+                      className={`text-[9px] mt-1 ${
+                        sample.type === "crop" ? "bg-primary/80 text-primary-foreground" :
+                        sample.type === "disease" ? "bg-destructive/80 text-destructive-foreground" :
+                        "bg-amber-600/80 text-white"
+                      }`}
+                    >
+                      {sample.expected}
+                    </Badge>
+                  </div>
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="grid lg:grid-cols-5 gap-8 max-w-6xl mx-auto">
         {/* Upload Section */}
