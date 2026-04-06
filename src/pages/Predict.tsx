@@ -1122,6 +1122,7 @@ const Predict = () => {
         </div>
       </div>
     </div>
+    </PageTransition>
   );
 };
 
