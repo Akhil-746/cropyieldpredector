@@ -895,7 +895,8 @@ const Predict = () => {
           ) : (
             <>
               {/* Detection Summary */}
-              <Card className={`p-7 shadow-elevated border-0 animate-scale-in ${result.imageType === "land" ? "bg-gradient-to-br from-amber-800 to-amber-950 text-white" : "gradient-hero text-primary-foreground"}`}>
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+              <Card className={`p-7 shadow-elevated border-0 ${result.imageType === "land" ? "bg-gradient-to-br from-amber-800 to-amber-950 text-white" : "gradient-hero text-primary-foreground"}`}>
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="opacity-70 text-sm mb-1">{result.imageType === "land" ? "Image Type" : "Crop Detected"}</p>
@@ -921,6 +922,7 @@ const Predict = () => {
                   </div>
                 </div>
               </Card>
+              </motion.div>
 
               {/* Soil Analysis (for land) */}
               {result.soilAnalysis && (
