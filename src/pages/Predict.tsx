@@ -622,8 +622,27 @@ const Predict = () => {
     reader.onloadend = () => {
       setImage(reader.result as string);
       setResult(null);
+      setShowSamples(false);
     };
     reader.readAsDataURL(file);
+  };
+
+  const loadSampleImage = async (src: string) => {
+    try {
+      const response = await fetch(src);
+      const blob = await response.blob();
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImage(reader.result as string);
+        setResult(null);
+        setShowSamples(false);
+      };
+      reader.readAsDataURL(blob);
+    } catch {
+      setImage(src);
+      setResult(null);
+      setShowSamples(false);
+    }
   };
 
   const handleAnalyze = async () => {
@@ -632,10 +651,9 @@ const Predict = () => {
     setResult(null);
     setAnalysisStep(0);
 
-    // Simulate step-by-step analysis
     for (let i = 0; i < analysisSteps.length; i++) {
       setAnalysisStep(i);
-      await new Promise(r => setTimeout(r, 600));
+      await new Promise(r => setTimeout(r, 700 + Math.random() * 300));
     }
 
     const prediction = await simulateImageAnalysis(image);
@@ -647,6 +665,7 @@ const Predict = () => {
   const clearImage = () => {
     setImage(null);
     setResult(null);
+    setShowSamples(true);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
