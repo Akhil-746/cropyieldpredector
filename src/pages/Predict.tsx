@@ -1,10 +1,12 @@
 import { useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Upload, Camera, X, Leaf, CheckCircle2, TrendingUp, AlertTriangle, ShieldCheck, Bug, IndianRupee, Sparkles, Sprout, Mountain, Droplets, ThermometerSun, Wind, Clock, FileSearch, Microscope } from "lucide-react";
+import { Upload, Camera, X, Leaf, CheckCircle2, TrendingUp, AlertTriangle, ShieldCheck, Bug, IndianRupee, Sparkles, Sprout, Mountain, Droplets, ThermometerSun, Wind, Clock, FileSearch, Microscope, Download, Share2, ImageIcon, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import PageTransition from "@/components/PageTransition";
 
 interface Disease {
   name: string;
